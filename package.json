@@ -1,0 +1,7 @@
+{
+  "name": "luckybox",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "node server.mjs", "check": "node --check dist/app.js && node --check dist/game.mjs && node --check dist/pinball-engine.mjs && node --check dist/pinball-ui.mjs && node --check dist/roulette-engine.mjs && node --check dist/roulette-ui.mjs && node --check dist/card-engine.mjs && node --check dist/card-ui.mjs && node --check dist/slot-engine.mjs && node --check dist/slot-ui.mjs && node --check server.mjs", "test": "node --test ladder-engine.test.mjs pinball-engine.test.mjs roulette-engine.test.mjs card-engine.test.mjs slot-engine.test.mjs" }
+}

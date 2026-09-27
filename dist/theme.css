@@ -1,0 +1,62 @@
+/* LuckyBox dark palette, shared across desktop, mobile and dialogs. */
+:root {
+  color-scheme: dark;
+  color: #e5edf8;
+  background: #0a0f1a;
+  --purple: #28cee8;
+  --muted: #9baec7;
+  --line: #243147;
+  --surface: #10192a;
+  --inset: #070e1e;
+}
+body { background: #0a0f1a; }
+.header { background: #0e1627; }
+.brand { color: #65d9f4; }
+.brand-icon { background: linear-gradient(145deg, #a56af3, #526cef 48%, #06b6d4); box-shadow: 0 4px 18px #06b6d422; color: white; }
+.beta, .panel-heading h2 span { background: #063346; color: #38dbef; }
+.help-button { background: #1e293b; color: #cbd5e1; border-color: #334155; }
+h1 span { color: #47d4ed; }
+.intro-label { color: #9baec7; }
+.panel, .game-card, dialog { background: var(--surface); border-color: var(--line); }
+.text-button, .list-toolbar, .section-heading > span, .game-number { color: #94a8c3; }
+#reset { color: #fb8193; }
+input, textarea { background: var(--inset); border-color: #33435c; color: #edf5ff; }
+input::placeholder, textarea::placeholder { color: #8298b6; }
+input:focus, textarea:focus { outline-color: #22c4e2; }
+button:focus-visible, a:focus-visible { outline-color: #5adff2; }
+.add-button, .primary-button { background: linear-gradient(110deg, #089fb6, #2463df); color: #fff; }
+.add-button:hover, .primary-button:hover { filter: brightness(1.12); }
+.name-list { background: var(--inset); border: 1px solid #1e2b40; border-radius: 12px; padding: 8px; }
+.name-row { background: #111d30; border: 1px solid #25344c; }
+.avatar { color: #36d3e9; background: #083747; }
+.name-row:nth-child(5n+2) .avatar { color: #c4a4ff; background: #302246; }
+.name-row:nth-child(5n+3) .avatar { color: #f59dc7; background: #40243c; }
+.name-row:nth-child(5n+4) .avatar { color: #63dfb2; background: #14382f; }
+.name-row:nth-child(5n+5) .avatar { color: #ffd073; background: #3e321d; }
+.remove, .close-button { color: #95a9c5; }
+.remove:hover { color: #ff819d; }
+.save-note, .participant-bottom p, .development-note, footer { color: #8ea2be; }
+.participant-bottom strong { color: #bccae0; }
+.game-card:hover { background: #142238; border-color: #426581; box-shadow: 0 8px 24px #0002; }
+.game-card[aria-pressed=true] { background: linear-gradient(145deg, #103344, #142444 80%); border-color: #20c9e3; box-shadow: 0 0 0 1px #20c9e30a, 0 5px 24px #0891b212; }
+.radio { border-color: #52637f; }
+.game-card[aria-pressed=true] .radio { border-color: #28cee8; background: #e3fbff; }
+.game-card p { color: #a5b6ce; }
+.game-card .english { color: #8fa7c7; }
+.game-art { background: #111d35 !important; }
+.game-card:nth-child(2) .game-art { background: #262334 !important; }
+.game-card:nth-child(3) .game-art { background: #0c2b30 !important; }
+.game-card:nth-child(4) .game-art { background: #122640 !important; }
+.game-card:nth-child(5) .game-art { background: #2a1d33 !important; }
+.selection-icon { color: #40d8ee; background: #0b3547; }
+.status-badge, .secondary-button { background: #213047; color: #b2c2d9; }
+.footer-brand { color: #b5c6de; }
+.footer-brand span { color: #4bd1e8; }
+dialog { box-shadow: 0 24px 100px #0008; }
+dialog::backdrop { background: #020611b8; }
+.toast { background: #1a3048; color: #eef8ff; border: 1px solid #36516d; }
+.empty { color: #a0b1cb; }
+.empty span { color: #36c5e1; }
+.empty button { color: #65ddf0; background: #0f3042; }
+* { scrollbar-color: #34455f #0a1222; }
+@media(max-width:720px) { input { font-size: 16px; } }
