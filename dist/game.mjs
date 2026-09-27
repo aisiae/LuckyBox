@@ -30,11 +30,11 @@ function showCelebration(round){
   results.replaceChildren();$('#celebration-title').textContent=kind==='ladder'?`${label} 결과 공개 완료!`:'축하합니다!';
   if(kind==='ladder'){
     $('#celebration-message').textContent=`${label}의 모든 결과를 확인했어요.`;
-    round.ladder.paths.forEach(path=>{const row=element('div','celebration-result-row');row.append(element('span','',path.name),element('strong','',path.result));results.append(row);});
+    round.ladder.paths.forEach((path,order)=>{const row=element('div',`celebration-result-row${path.winner?' winner':''}`);row.append(element('span','',`${order+1}. ${path.name}`),element('strong','',path.result));results.append(row);});
   }else{
-    const winners=round.ladder.paths.filter(path=>path.winner).map(path=>path.name),wrap=element('div','celebration-winners');
-    winners.forEach(name=>wrap.append(element('span','celebration-winner',`★ ${name}`)));results.append(wrap);
-    $('#celebration-message').textContent=`${label}의 ${winners.length>1?'행운의 주인공들을':'행운의 주인공을'} 축하해주세요!`;
+    const winners=round.ladder.paths.filter(path=>path.winner).map(path=>path.name);
+    $('#celebration-message').textContent=`${winners.join(', ')} 님의 당첨을 축하합니다! 전체 결과를 확인해보세요.`;
+    round.ladder.paths.forEach((path,order)=>{const row=element('div',`celebration-result-row${path.winner?' winner':''}`),position=path.rank?`${path.rank}위 · `:`${order+1}. `,status=path.winner?'★ 당첨':isPinball?'완주':'미당첨';row.append(element('span','',`${position}${path.name}`),element('strong','',status));results.append(row);});
   }
   results.scrollTop=0;dialog.classList.remove('celebrating');void dialog.offsetWidth;dialog.classList.add('celebrating');dialog.showModal();$('#close-celebration').focus();
 }

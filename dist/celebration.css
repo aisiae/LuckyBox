@@ -91,9 +91,18 @@
 }
 
 .celebration-result-row strong {
-  color: #83ebd1;
+  color: #8fa7c2;
   text-align: right;
   overflow-wrap: anywhere;
+}
+
+.celebration-result-row.winner {
+  border-color: #57e2c1;
+  background: #103d38;
+}
+
+.celebration-result-row.winner strong {
+  color: #8effd9;
 }
 
 .celebration-dialog .primary-button {
