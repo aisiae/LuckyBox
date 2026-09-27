@@ -1,6 +1,7 @@
 const $ = (selector) => document.querySelector(selector);
 const STORAGE_KEY = 'luckybox.participants.v1';
-let names = [];
+const GROUP_KEY = 'luckybox.groups.v1';
+let groups = [], activeGroupId = '';
 let selected = 'ladder';
 let toastTimer;
 const svg = (content) => `<svg viewBox="0 0 140 86" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${content}</svg>`;
@@ -12,32 +13,36 @@ const games = [
   { id:'slots', title:'슬롯 머신', english:'SLOTS', description:'이름이 멈추는 순간, 주인공은?', detail:'돌아가는 이름 사이에서 행운의 주인공을 뽑아요.', color:'#fff0f5', icon:'≋', art:svg('<rect x="20" y="20" width="100" height="48" rx="9" fill="#e795b5"/><g fill="#fff8fb"><rect x="27" y="27" width="25" height="34" rx="4"/><rect x="57" y="27" width="25" height="34" rx="4"/><rect x="87" y="27" width="25" height="34" rx="4"/></g><g fill="#d77aa2" font-family="sans-serif" font-size="25" font-weight="bold"><text x="32" y="53">7</text><text x="62" y="53">7</text><text x="92" y="53">7</text></g>') }
 ];
 function notify(message) { $('#toast').textContent=message; $('#toast').classList.add('visible'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>$('#toast').classList.remove('visible'),3000); }
-function save() { try { localStorage.setItem(STORAGE_KEY,JSON.stringify(names)); } catch { $('#save-note').textContent='자동 저장을 사용할 수 없어요. 이 창을 닫으면 명단이 사라집니다.'; } }
-function renderNames() {
-  $('#count').textContent=names.length; $('#reset').disabled=!names.length;
-  const list=$('#name-list'); list.replaceChildren();
-  if(!names.length) { list.innerHTML='<div class="empty"><span>＋</span>아직 참가자가 없어요.<br>첫 번째 이름을 추가해보세요.<button id="sample">예시 명단으로 둘러보기</button></div>'; $('#sample').onclick=()=>addNames(['민수','지은','서준','하린','도윤','수빈']); return; }
-  names.forEach((name,index)=> { const row=document.createElement('div'); row.className='name-row'; const avatar=document.createElement('span'); avatar.className='avatar'; avatar.textContent=String(index+1).padStart(2,'0'); const label=document.createElement('span'); label.className='name-label'; label.textContent=name; const remove=document.createElement('button'); remove.className='remove'; remove.textContent='×'; remove.setAttribute('aria-label',`${name} 삭제`); remove.onclick=()=>{names.splice(index,1);save();renderNames(); const next=list.querySelectorAll('.remove'); (next[Math.min(index,next.length-1)] || $('#name-input')).focus();}; row.append(avatar,label,remove); list.append(row); });
+const allNames=()=>groups.flatMap(group=>group.members);
+const activeGroup=()=>groups.find(group=>group.id===activeGroupId)||groups[0];
+const newGroup=(name,members=[])=>({id:`g-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,name,members});
+function save(){try{localStorage.setItem(GROUP_KEY,JSON.stringify(groups));localStorage.setItem(STORAGE_KEY,JSON.stringify(allNames()));}catch{$('#save-note').textContent='자동 저장을 사용할 수 없어요. 이 창을 닫으면 명단이 사라집니다.';}}
+function renderGroups(){
+  const root=$('#main-group-tabs');root.replaceChildren();groups.forEach(group=>{const button=document.createElement('button');button.type='button';button.className='main-group-tab';button.setAttribute('role','tab');button.setAttribute('aria-selected',String(group.id===activeGroupId));button.textContent=`${group.name} ${group.members.length}`;button.onclick=()=>{activeGroupId=group.id;renderGroups();renderNames();};root.append(button);});
+  const group=activeGroup();$('#group-name').value=group.name;$('#delete-group').disabled=groups.length===1;$('#active-group-label').textContent=`${group.name} 참가자`;$('#bulk-group-name').textContent=group.name;$('#add-group').disabled=groups.length>=10;
 }
-function addNames(values) {
-  const incoming=values.map(v=>v.trim()).filter(Boolean);
-  if(!incoming.length) { notify('추가할 이름을 입력해주세요.'); return false; }
-  if(incoming.some(n=>n.length>20)) {notify('이름은 20자 이내로 입력해주세요.'); return false;}
-  const unique=[...new Set(incoming)]; const fresh=unique.filter(n=>!names.includes(n));
-  if(names.length+fresh.length>50) {notify('참가자는 최대 50명까지 추가할 수 있어요.');return false;}
-  if(!fresh.length) {notify('이미 있는 이름이에요. 구분할 별명을 붙여주세요.');return false;}
-  names.push(...fresh); save(); renderNames(); notify(`${fresh.length}명을 추가했어요.${fresh.length<incoming.length?' 중복 이름은 제외했어요.':''}`); return true;
+function renderNames(){
+  const names=allNames(),group=activeGroup();$('#count').textContent=names.length;$('#reset').disabled=!names.length;const list=$('#name-list');list.replaceChildren();
+  if(!group.members.length){list.innerHTML='<div class="empty"><span>＋</span>이 그룹은 아직 비어 있어요.<br>첫 번째 이름을 추가해보세요.<button id="sample">예시 명단 추가</button></div>';$('#sample').onclick=()=>addNames(['민수','지은','서준','하린','도윤','수빈']);return;}
+  group.members.forEach((name,index)=>{const row=document.createElement('div');row.className='name-row';const avatar=document.createElement('span');avatar.className='avatar';avatar.textContent=String(index+1).padStart(2,'0');const label=document.createElement('span');label.className='name-label';label.textContent=name;
+    if(groups.length>1){const move=document.createElement('select');move.setAttribute('aria-label',`${name} 그룹 이동`);groups.forEach(target=>{const option=document.createElement('option');option.value=target.id;option.textContent=target.name;option.selected=target.id===group.id;move.append(option);});move.onchange=()=>{const target=groups.find(item=>item.id===move.value);group.members.splice(index,1);target.members.push(name);save();renderGroups();renderNames();};row.append(avatar,label,move);}else row.append(avatar,label);
+    const remove=document.createElement('button');remove.className='remove';remove.textContent='×';remove.setAttribute('aria-label',`${name} 삭제`);remove.onclick=()=>{group.members.splice(index,1);save();renderGroups();renderNames();};row.append(remove);list.append(row);});
 }
+function addNames(values){const incoming=values.map(value=>value.trim()).filter(Boolean);if(!incoming.length){notify('추가할 이름을 입력해주세요.');return false;}if(incoming.some(name=>name.length>20)){notify('이름은 20자 이내로 입력해주세요.');return false;}const current=allNames(),unique=[...new Set(incoming)],fresh=unique.filter(name=>!current.includes(name));if(current.length+fresh.length>50){notify('참가자는 최대 50명까지 추가할 수 있어요.');return false;}if(!fresh.length){notify('이미 있는 이름이에요. 구분할 별명을 붙여주세요.');return false;}activeGroup().members.push(...fresh);save();renderGroups();renderNames();notify(`${activeGroup().name}에 ${fresh.length}명을 추가했어요.${fresh.length<incoming.length?' 중복 이름은 제외했어요.':''}`);return true;}
 function selectGame(id) {const game=games.find(g=>g.id===id);if(!game)throw new Error('알 수 없는 게임입니다.');selected=id;document.querySelectorAll('.game-card').forEach(card=>card.setAttribute('aria-pressed',String(card.dataset.game===id)));$('#selection-title').textContent=game.title;$('#selection-description').textContent=game.detail;$('#selection-icon').textContent=game.icon;}
 $('#game-grid').innerHTML=games.map((g,i)=>`<button class="game-card" data-game="${g.id}" aria-pressed="false"><div class="card-top"><span class="game-number">GAME 0${i+1}</span><span class="radio"></span></div><div class="game-art" style="background:${g.color}">${g.art}</div><h3>${g.title}<span class="english">${g.english}</span></h3><p>${g.description}</p></button>`).join('');
 document.querySelectorAll('.game-card').forEach(card=>card.onclick=()=>{save();location.href=`game.html?game=${card.dataset.game}`;});
 $('#name-form').onsubmit=event=>{event.preventDefault();if(addNames([$('#name-input').value]))$('#name-input').value='';$('#name-input').focus();};
-$('#bulk-open').onclick=()=>$('#bulk-dialog').showModal();
+$('#bulk-open').onclick=()=>{$('#bulk-group-name').textContent=activeGroup().name;$('#bulk-dialog').showModal();};
 $('#bulk-form').onsubmit=event=>{event.preventDefault();if(addNames($('#bulk-input').value.split(/[\n,\r]+/))){$('#bulk-input').value='';$('#bulk-dialog').close();}};
 $('#help').onclick=()=>$('#help-dialog').showModal();
 $('#reset').onclick=()=>$('#reset-dialog').showModal();
-$('#reset-confirm').onclick=()=>{names=[];save();renderNames();$('#reset-dialog').close();$('#name-input').focus();notify('참가자 명단을 지웠어요.');};
+$('#add-group').onclick=()=>{if(groups.length>=10)return;const used=new Set(groups.map(group=>group.name));let index=groups.length+1;while(used.has(`${index}조`))index++;const group=newGroup(`${index}조`);groups.push(group);activeGroupId=group.id;save();renderGroups();renderNames();$('#group-name').focus();$('#group-name').select();};
+$('#group-name').onchange=()=>{const value=$('#group-name').value.trim();if(!value){$('#group-name').value=activeGroup().name;notify('그룹 이름을 입력해주세요.');return;}if(groups.some(group=>group.id!==activeGroupId&&group.name===value)){notify('같은 그룹 이름이 이미 있어요.');$('#group-name').value=activeGroup().name;return;}activeGroup().name=value;save();renderGroups();};
+$('#delete-group').onclick=()=>{const group=activeGroup();if(group.members.length){notify('참가자를 다른 그룹으로 옮기거나 삭제한 뒤 그룹을 삭제해주세요.');return;}groups=groups.filter(item=>item.id!==group.id);activeGroupId=groups[0].id;save();renderGroups();renderNames();};
+$('#reset-confirm').onclick=()=>{groups=[newGroup('1조')];activeGroupId=groups[0].id;save();renderGroups();renderNames();$('#reset-dialog').close();$('#name-input').focus();notify('참가자 명단과 그룹을 초기화했어요.');};
 document.querySelectorAll('[data-close]').forEach(button=>button.onclick=()=>document.getElementById(button.dataset.close).close());
-try { const stored=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); if(Array.isArray(stored))names=[...new Set(stored.filter(n=>typeof n==='string'&&n.trim()&&n.trim().length<=20).map(n=>n.trim()))].slice(0,50); }catch{ /* A damaged or unavailable local list starts empty. */ }
-renderNames();selectGame(selected);
-if(document.modelContext?.registerTool){try{Promise.resolve(document.modelContext.registerTool({name:'get_luckybox_setup',description:'Read the participant list and available games. All five games are playable on their dedicated pages.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute:()=>({participants:[...names],availableGames:['ladder','pinball','roulette','cards','slots']})})).catch(()=>{});}catch{}}
+try{const stored=JSON.parse(localStorage.getItem(GROUP_KEY)||'null');if(Array.isArray(stored)&&stored.length){const seen=new Set();groups=stored.slice(0,10).map((group,index)=>({id:typeof group.id==='string'?group.id:`saved-${index}`,name:typeof group.name==='string'&&group.name.trim()?group.name.trim().slice(0,16):`${index+1}조`,members:Array.isArray(group.members)?group.members.filter(name=>typeof name==='string'&&name.trim()&&name.trim().length<=20&&!seen.has(name.trim())&&seen.add(name.trim())).map(name=>name.trim()):[]}));}}catch{}
+if(!groups.length){let legacy=[];try{const stored=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');if(Array.isArray(stored))legacy=[...new Set(stored.filter(name=>typeof name==='string'&&name.trim()&&name.trim().length<=20).map(name=>name.trim()))].slice(0,50);}catch{}groups=[newGroup('1조',legacy)];}
+activeGroupId=groups[0].id;save();renderGroups();renderNames();selectGame(selected);
+if(document.modelContext?.registerTool){try{Promise.resolve(document.modelContext.registerTool({name:'get_luckybox_setup',description:'Read participant groups and available games. All five games are playable on their dedicated pages.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute:()=>({groups:groups.map(group=>({name:group.name,participants:[...group.members]})),availableGames:['ladder','pinball','roulette','cards','slots']})})).catch(()=>{});}catch{}}

@@ -16,11 +16,14 @@ const isCards = kind === 'cards';
 const isSlots = kind === 'slots';
 let pinballView, rouletteView, cardView, slotView, selectedMap;
 const palette = ['#33d5ef','#b499ff','#f78abd','#57e4b5','#ffcd73','#7eafff'];
-let names = [], groups = [], groupResults = [], rounds = [], active = 0, busy = false, toastTimer;
-try { const value=JSON.parse(localStorage.getItem('luckybox.participants.v1')||'[]'); if(Array.isArray(value)) names=[...new Set(value.filter(n=>typeof n==='string'&&n.trim()&&n.trim().length<=20).map(n=>n.trim()))].slice(0,50); } catch {}
+let names = [], groups = [], groupLabels = [], savedGroups = [], selectedGroupIds = new Set(), groupResults = [], rounds = [], active = 0, busy = false, toastTimer;
+try{const value=JSON.parse(localStorage.getItem('luckybox.groups.v1')||'null');if(Array.isArray(value))savedGroups=value.filter(group=>group&&typeof group.id==='string'&&typeof group.name==='string'&&Array.isArray(group.members)).map(group=>({id:group.id,name:group.name.trim().slice(0,16),members:[...new Set(group.members.filter(name=>typeof name==='string'&&name.trim()).map(name=>name.trim()))]}));}catch{}
+if(savedGroups.length){names=savedGroups.flatMap(group=>group.members);savedGroups.filter(group=>group.members.length>=2).forEach(group=>selectedGroupIds.add(group.id));document.body.classList.add('saved-groups-mode');}
+else try { const value=JSON.parse(localStorage.getItem('luckybox.participants.v1')||'[]'); if(Array.isArray(value)) names=[...new Set(value.filter(n=>typeof n==='string'&&n.trim()&&n.trim().length<=20).map(n=>n.trim()))].slice(0,50); } catch {}
 function element(tag,className,text) {const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=text;return node;}
 function notify(text){$('#toast').textContent=text;$('#toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('visible'),3000);}
 function options(select, count, suffix, value=1) {select.replaceChildren();for(let i=1;i<=count;i++){const option=element('option','',`${i}${suffix}`);option.value=i;select.append(option);} select.value=String(Math.min(Math.max(1,value),count));}
+const groupName=index=>groupLabels[index]||`${index+1}조`;
 function syncGroupResults(reset=false){
   groupResults=groups.map((members,index)=>{
     const previous=reset?[]:(groupResults[index]||[]),next=previous.slice(0,members.length);
@@ -32,18 +35,19 @@ function renderAssignments(){
   if(kind==='ladder')syncGroupResults();
   const root=$('#assignments');root.replaceChildren();
   groups.forEach((members,index)=>{
-    const card=element('section','assignment-group');card.append(element('h3','',`${index+1}조 · ${members.length}명`));
-    if(!members.length)card.append(element('p','muted','아래 다른 조에서 참가자를 옮겨주세요.'));
-    members.forEach(name=>{const row=element('div','assignment-person');const select=element('select');options(select,groups.length,'조',index+1);select.setAttribute('aria-label',`${name} 그룹`);select.onchange=()=>{const target=Number(select.value)-1;groups[index]=groups[index].filter(n=>n!==name);groups[target].push(name);syncGroupResults();renderAssignments();};row.append(element('span','',name),select);card.append(row);});
-    if(kind==='ladder'&&members.length){const editor=element('div','outcome-editor');editor.append(element('h4','',`결과 설정 · ${members.length}개`));groupResults[index].forEach((result,resultIndex)=>{const row=element('div','outcome-row'),label=element('label','',`결과 ${resultIndex+1}`),input=element('input');input.value=result;input.maxLength=30;input.placeholder='예: 10,000원, 꽝, 커피';input.setAttribute('aria-label',`${index+1}조 결과 ${resultIndex+1}`);input.oninput=()=>groupResults[index][resultIndex]=input.value;row.append(label,input);editor.append(row);});card.append(editor);}
+    const card=element('section','assignment-group');card.append(element('h3','',`${groupName(index)} · ${members.length}명`));
+    members.forEach(name=>{const row=element('div','assignment-person');if(savedGroups.length)row.append(element('span','',name));else{const select=element('select');options(select,groups.length,'조',index+1);select.setAttribute('aria-label',`${name} 그룹`);select.onchange=()=>{const target=Number(select.value)-1;groups[index]=groups[index].filter(n=>n!==name);groups[target].push(name);syncGroupResults();renderAssignments();};row.append(element('span','',name),select);}card.append(row);});
+    if(kind==='ladder'&&members.length){const editor=element('div','outcome-editor');editor.append(element('h4','',`결과 설정 · ${members.length}개`));groupResults[index].forEach((result,resultIndex)=>{const row=element('div','outcome-row'),label=element('label','',`결과 ${resultIndex+1}`),input=element('input');input.value=result;input.maxLength=30;input.placeholder='예: 10,000원, 꽝, 커피';input.setAttribute('aria-label',`${groupName(index)} 결과 ${resultIndex+1}`);input.oninput=()=>groupResults[index][resultIndex]=input.value;row.append(label,input);editor.append(row);});card.append(editor);}
     root.append(card);
   });
-  const min=Math.min(...groups.map(g=>g.length));
+  const min=groups.length?Math.min(...groups.map(g=>g.length)):0;
   options($('#winner-count'),Math.max(1,min-1),'명',Number($('#winner-count').value)||1);
-  $('#prepare').disabled=min<2;$('#setup-error').textContent=min<2?'모든 그룹에 참가자를 2명 이상 배정해주세요.':'';
+  $('#prepare').disabled=min<2;$('#setup-error').textContent=!groups.length?'진행할 그룹을 하나 이상 선택해주세요.':min<2?'모든 그룹에 참가자를 2명 이상 배정해주세요.':'';
 }
 function buildGroups(random=false){groups=splitGroups(names,Number($('#group-count').value),random);syncGroupResults(true);renderAssignments();}
-function renderTabs(){const root=$('#group-tabs');root.replaceChildren();rounds.forEach((round,i)=>{const button=element('button','group-tab',`${i+1}조 · ${round.ladder.names.length}명${round.done?' ✓':''}`);button.setAttribute('aria-pressed',String(active===i));button.disabled=busy;button.onclick=()=>{active=i;renderPlay();};root.append(button);});$('#progress-label').textContent=`${rounds.filter(r=>r.done).length} / ${rounds.length}개 그룹 완료`;}
+function buildSavedGroups(){const selected=savedGroups.filter(group=>selectedGroupIds.has(group.id)&&group.members.length>=2);groups=selected.map(group=>[...group.members]);groupLabels=selected.map(group=>group.name);names=groups.flat();syncGroupResults(true);$('#total-count').textContent=`선택 ${names.length}명`;renderAssignments();}
+function renderGroupPicker(){const root=$('#group-picker');root.replaceChildren();savedGroups.forEach(group=>{const label=element('label','group-choice'),checkbox=element('input'),name=element('span','',group.name),count=element('small','',`${group.members.length}명`);checkbox.type='checkbox';checkbox.checked=selectedGroupIds.has(group.id);checkbox.disabled=group.members.length<2;checkbox.onchange=()=>{checkbox.checked?selectedGroupIds.add(group.id):selectedGroupIds.delete(group.id);buildSavedGroups();};label.append(checkbox,name,count);root.append(label);});buildSavedGroups();}
+function renderTabs(){const root=$('#group-tabs');root.replaceChildren();rounds.forEach((round,i)=>{const button=element('button','group-tab',`${groupName(i)} · ${round.ladder.names.length}명${round.done?' ✓':''}`);button.setAttribute('aria-pressed',String(active===i));button.disabled=busy;button.onclick=()=>{active=i;renderPlay();};root.append(button);});$('#progress-label').textContent=`${rounds.filter(r=>r.done).length} / ${rounds.length}개 그룹 완료`;}
 function svgElement(tag,attrs){const el=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attrs).forEach(([key,value])=>el.setAttribute(key,String(value)));return el;}
 function drawBoard(round,animateStart=null){
   const {ladder}=round;const board=$('#ladder-board');board.replaceChildren();board.style.minWidth=`${Math.max(320,ladder.names.length*100)}px`;board.style.setProperty('--lanes',ladder.names.length);
@@ -65,7 +69,7 @@ function renderPlay(){
   if(isRoulette){renderRoulette();return;}
   if(isCards){renderCards();return;}
   if(isSlots){renderSlots();return;}
-  renderTabs();const round=rounds[active];$('#group-kicker').textContent=`GROUP ${String(active+1).padStart(2,'0')}`;$('#active-group-title').textContent=`${active+1}조 · 이름을 눌러 결과 확인`;
+  renderTabs();const round=rounds[active];$('#group-kicker').textContent=`GROUP ${String(active+1).padStart(2,'0')}`;$('#active-group-title').textContent=`${groupName(active)} · 이름을 눌러 결과 확인`;
   $('#run-group').hidden=true;
   $('#play-hint').textContent=round.done?'모든 참가자의 결과를 확인했어요. 아래 결과판에서 한눈에 볼 수 있어요.':'확인할 사람의 이름을 누르면 그 사람의 길만 따라가고 결과를 보여줘요.';
   const last=round.lastRevealed===null?null:round.ladder.paths.find(path=>path.start===round.lastRevealed);$('#reveal-bar').textContent=last?`${last.name} → ${last.result}`:'';
@@ -77,13 +81,13 @@ function slotControls(round){
 }
 function renderSlots(){
   renderTabs();const round=rounds[active];$('#group-kicker').textContent=`GROUP ${String(active+1).padStart(2,'0')} · LUCKY SLOTS`;
-  $('#active-group-title').textContent=`${active+1}조 · ${round.slots.names.length}명 중 ${round.slots.winnerCount}명 추첨`;
+  $('#active-group-title').textContent=`${groupName(active)} · ${round.slots.names.length}명 중 ${round.slots.winnerCount}명 추첨`;
   $('#play-hint').textContent='세 개의 릴이 같은 이름에 멈추면 당첨이에요. 여러 명을 뽑을 때는 한 번씩 레버를 당겨주세요.';slotControls(round);
   slotView?.destroy();slotView=new SlotView($('#slot-stage'),round.slots,slots=>{busy=false;round.done=slots.done;round.ladder.paths=slots.names.map(name=>({name,winner:slots.winners.includes(name)}));$('#edit-setup').disabled=false;slotControls(round);renderTabs();renderResults();});
 }
 function renderCards(){
   renderTabs();const round=rounds[active];$('#group-kicker').textContent=`GROUP ${String(active+1).padStart(2,'0')} · PICK A CARD`;
-  $('#active-group-title').textContent=`${active+1}조 · 이름 카드를 직접 뒤집어보세요`;
+  $('#active-group-title').textContent=`${groupName(active)} · 이름 카드를 직접 뒤집어보세요`;
   $('#run-group').hidden=true;$('#play-hint').textContent=round.done?'모든 카드가 공개됐어요. 아래에서 그룹별 결과를 확인할 수 있어요.':'참가자 이름이 적힌 카드를 누르면 그 사람의 결과만 공개돼요.';
   $('#reveal-bar').textContent=round.lastCard?`${round.lastCard.name} → ${round.lastCard.winner?'★ 당첨':'꽝'}`:'';
   $('#next-group').hidden=!round.done||rounds.every(r=>r.done);
@@ -97,7 +101,7 @@ function renderCards(){
 function renderPinball(){
   renderTabs();const round=rounds[active],map=MAPS.find(m=>m.id===round.race.map.id);
   $('#group-kicker').textContent=`GROUP ${String(active+1).padStart(2,'0')} · ${map.name}`;
-  $('#active-group-title').textContent=`${active+1}조 · 먼저 도착한 ${round.winners}명 당첨`;
+  $('#active-group-title').textContent=`${groupName(active)} · 먼저 도착한 ${round.winners}명 당첨`;
   $('#run-group').disabled=busy||round.done;$('#run-group').textContent=round.done?'레이스 완료':busy?'레이스 진행 중…':'이 그룹 출발!';
   $('#play-hint').textContent=`${map.name} · ${LENGTHS[round.race.map.length].label} · ${round.race.balls.length}명 참가. 모든 장애물이 이어지는 코스이며, 도착 시간은 경로에 따라 달라요.`;
   $('#reveal-bar').textContent=round.done?`★ ${round.ladder.paths.filter(p=>p.winner).map(p=>p.name).join(', ')} 당첨!`:'';
@@ -116,7 +120,7 @@ function rouletteControls(round){
 }
 function renderRoulette(){
   renderTabs();const round=rounds[active];$('#group-kicker').textContent=`GROUP ${String(active+1).padStart(2,'0')} · ROULETTE`;
-  $('#active-group-title').textContent=`${active+1}조 · ${round.wheel.names.length}명 중 ${round.wheel.winnerCount}명 추첨`;
+  $('#active-group-title').textContent=`${groupName(active)} · ${round.wheel.names.length}명 중 ${round.wheel.winnerCount}명 추첨`;
   $('#play-hint').textContent='위쪽 화살표가 가리키는 사람이 당첨돼요. 여러 명을 뽑을 때는 한 번씩 돌려주세요.';rouletteControls(round);
   rouletteView?.destroy();rouletteView=new RouletteView($('#roulette-stage'),round.wheel,wheel=>{
     busy=false;round.done=wheel.done;round.ladder.paths=wheel.names.map(name=>({name,winner:wheel.winners.includes(name)}));
@@ -126,7 +130,7 @@ function renderRoulette(){
 function renderResults(){
   const root=$('#result-grid');root.replaceChildren();const completed=rounds.filter(r=>r.done),revealedCount=kind==='ladder'?rounds.reduce((sum,r)=>sum+r.revealed.size,0):isCards?rounds.reduce((sum,r)=>sum+r.cards.revealedCount,0):0;$('#copy-results').disabled=(kind==='ladder'||isCards)?!revealedCount:!rounds.some(r=>r.done||r.wheel?.winners.length||r.slots?.winners.length);
   $('#result-summary').textContent=(kind==='ladder'||isCards)?(rounds.length?`${names.length}명 중 ${revealedCount}명의 결과를 확인했어요.`:`${kind==='ladder'?'사다리를 만들면':'카드를 준비하면'} 확인한 결과가 여기에 모여요.`):rounds.length?completed.length===rounds.length?`모든 그룹이 완료됐어요. 총 ${names.length}명 중 ${completed.reduce((sum,r)=>sum+r.ladder.paths.filter(p=>p.winner).length,0)}명이 당첨됐어요.`:`${rounds.length}개 그룹 중 ${completed.length}개 완료 · 미진행 그룹의 결과는 아직 공개되지 않았어요.`:'게임을 준비하면 각 그룹의 결과가 여기에 모여요.';
-  rounds.forEach((round,i)=>{const card=element('article','result-card');const title=element('h3','',`${i+1}조`);title.append(element('span','small-label',`${round.ladder.names.length}명`));card.append(title);
+  rounds.forEach((round,i)=>{const card=element('article','result-card');const title=element('h3','',groupName(i));title.append(element('span','small-label',`${round.ladder.names.length}명`));card.append(title);
     if(kind==='ladder'){const list=element('div','custom-result-list');round.ladder.paths.forEach(path=>{const revealed=round.revealed.has(path.start),row=element('div','custom-result-row');row.append(element('span','',path.name),element('span',revealed?'':'hidden-result',revealed?path.result:'미확인'));list.append(row);});card.append(list);}else if(isCards){const list=element('div','custom-result-list');round.ladder.paths.forEach(path=>{const row=element('div','custom-result-row');row.append(element('span','',path.name),element('span',path.revealed?(path.winner?'winner-card-result':''):'hidden-result',path.revealed?(path.winner?'★ 당첨':'꽝'):'미확인'));list.append(row);});card.append(list);}else if(round.done){card.append(element('div','winner-names',round.ladder.paths.filter(p=>p.winner).map(p=>p.name).join(', ')));const details=element('details');details.append(element('summary','','전체 참가자 결과'));round.ladder.paths.forEach(path=>{const row=element('div','result-row');row.append(element('span','',`${path.rank?path.rank+'위 · ':''}${path.name}`),element('span','',path.winner?'★ 당첨':'통과'));details.append(row);});card.append(details);}else if(round.wheel?.winners.length||round.slots?.winners.length){const draw=round.wheel||round.slots;card.append(element('div','winner-names',draw.winners.join(', ')),element('p','pending',`${draw.winnerCount-draw.winners.length}명 추가 추첨 대기`));}else card.append(element('p','pending','결과 대기 중'));root.append(card);
   });
 }
@@ -148,7 +152,7 @@ $('#run-group').onclick=()=>{
 $('#next-group').onclick=()=>{const next=rounds.findIndex((r,i)=>i>active&&!r.done);active=next>=0?next:rounds.findIndex(r=>!r.done);renderPlay();$('#play-section').scrollIntoView({behavior:'smooth'});};
 $('#edit-setup').onclick=()=>$('#new-round-dialog').showModal();$('#cancel-new').onclick=()=>$('#new-round-dialog').close();
 $('#confirm-new').onclick=()=>{pinballView?.destroy();rouletteView?.destroy();cardView?.destroy();slotView?.destroy();rounds=[];active=0;$('#new-round-dialog').close();$('#setup-controls').hidden=false;$('#locked-description').hidden=true;$('#edit-setup').hidden=true;$('#play-section').hidden=true;renderResults();$('#setup-title').scrollIntoView({behavior:'smooth'});};
-$('#copy-results').onclick=async()=>{const text=kind==='ladder'?[`LuckyBox · ${titles[kind]}`,...rounds.flatMap((r,i)=>[`${i+1}조`,...r.ladder.paths.map(path=>`- ${path.name}: ${r.revealed.has(path.start)?path.result:'미확인'}`)])]:isCards?[`LuckyBox · ${titles[kind]}`,...rounds.flatMap((r,i)=>[`${i+1}조`,...r.ladder.paths.map(path=>`- ${path.name}: ${path.revealed?(path.winner?'당첨':'꽝'):'미확인'}`)])]:[`LuckyBox · ${titles[kind]}`,...rounds.map((r,i)=>{const draw=r.wheel||r.slots;return `${i+1}조: ${r.done?r.ladder.paths.filter(p=>p.winner).map(p=>p.name).join(', ')+' 당첨':draw?.winners.length?draw.winners.join(', ')+` 당첨 (${draw.winnerCount-draw.winners.length}명 추가 추첨 대기)`:'미진행'}`;})];try{await navigator.clipboard.writeText(text.join('\n'));notify('그룹별 결과를 복사했어요.');}catch{notify('복사 권한이 없어요. 결과의 텍스트를 직접 선택해 복사해주세요.');}};
+$('#copy-results').onclick=async()=>{const text=kind==='ladder'?[`LuckyBox · ${titles[kind]}`,...rounds.flatMap((r,i)=>[groupName(i),...r.ladder.paths.map(path=>`- ${path.name}: ${r.revealed.has(path.start)?path.result:'미확인'}`)])]:isCards?[`LuckyBox · ${titles[kind]}`,...rounds.flatMap((r,i)=>[groupName(i),...r.ladder.paths.map(path=>`- ${path.name}: ${path.revealed?(path.winner?'당첨':'꽝'):'미확인'}`)])]:[`LuckyBox · ${titles[kind]}`,...rounds.map((r,i)=>{const draw=r.wheel||r.slots;return `${groupName(i)}: ${r.done?r.ladder.paths.filter(p=>p.winner).map(p=>p.name).join(', ')+' 당첨':draw?.winners.length?draw.winners.join(', ')+` 당첨 (${draw.winnerCount-draw.winners.length}명 추가 추첨 대기)`:'미진행'}`;})];try{await navigator.clipboard.writeText(text.join('\n'));notify('그룹별 결과를 복사했어요.');}catch{notify('복사 권한이 없어요. 결과의 텍스트를 직접 선택해 복사해주세요.');}};
 document.title=`${titles[kind]||'게임'} · LuckyBox`;$('#game-title').textContent=titles[kind]||'게임';
 if(kind==='ladder'){$('#winner-count-label').hidden=true;$('#game-subtitle').textContent='이름을 누르고, 그 사람의 길 끝에서 결과를 확인하세요.';$('#result-summary').textContent='사다리를 만들면 확인한 결과가 여기에 모여요.';}
 if(isPinball){document.body.classList.add('pinball-mode');$('#game-subtitle').textContent='통통 튀고, 뒤집히고. 끝까지 눈을 뗄 수 없는 레이스.';$('#pinball-maps').hidden=false;$('#duration-label').hidden=false;selectedMap=mapPicker($('#pinball-maps'));$('.ladder-scroll').hidden=true;$('#pinball-stage').hidden=false;$('#prepare').textContent='이 구성으로 레이스 준비 →';$('#result-summary').textContent='레이스를 준비하면 각 그룹의 결과가 여기에 모여요.';}
@@ -157,5 +161,5 @@ if(isCards){document.body.classList.add('cards-mode');$('#game-subtitle').textCo
 if(isSlots){document.body.classList.add('slots-mode');$('#game-subtitle').textContent='세 개의 이름이 맞춰지는 순간, 행운의 주인공이 탄생합니다.';$('.ladder-scroll').hidden=true;$('#slot-stage').hidden=false;$('#prepare').textContent='이 구성으로 슬롯 준비 →';$('#result-summary').textContent='그룹별 당첨자가 여기에 모여요.';}
 if(!['ladder','pinball','roulette','cards','slots'].includes(kind)){$('#unavailable').hidden=false;$('#results-link').hidden=true;$('#game-subtitle').textContent='새로운 랜덤 게임을 준비하고 있어요.';}
 else if(names.length<2){$('#no-names').hidden=false;$('#results-link').hidden=true;}
-else{$('#ladder-app').hidden=false;$('#total-count').textContent=`총 ${names.length}명`;options($('#group-count'),Math.min(10,Math.floor(names.length/2)),'개');buildGroups();}
+else{$('#ladder-app').hidden=false;if(savedGroups.length){$('#saved-group-picker').hidden=false;renderGroupPicker();}else{$('#total-count').textContent=`총 ${names.length}명`;options($('#group-count'),Math.min(10,Math.floor(names.length/2)),'개');buildGroups();}}
 window.addEventListener('beforeunload',event=>{if(rounds.length){event.preventDefault();event.returnValue='';}});

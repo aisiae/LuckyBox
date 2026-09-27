@@ -1,7 +1,8 @@
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
-const assets = { '/':['index.html','text/html; charset=utf-8'], '/index.html':['index.html','text/html; charset=utf-8'], '/styles.css':['styles.css','text/css; charset=utf-8'], '/theme.css':['theme.css','text/css; charset=utf-8'], '/app.js':['app.js','text/javascript; charset=utf-8'] };
+const assets = { '/':['index.html','text/html; charset=utf-8'], '/index.html':['index.html','text/html; charset=utf-8'], '/styles.css':['styles.css','text/css; charset=utf-8'], '/groups.css':['groups.css','text/css; charset=utf-8'], '/theme.css':['theme.css','text/css; charset=utf-8'], '/app.js':['app.js','text/javascript; charset=utf-8'] };
 for (const [file, type] of [['game.html','text/html'],['game.css','text/css'],['ladder-custom.css','text/css'],['game.mjs','text/javascript'],['ladder-engine.mjs','text/javascript']]) assets[`/${file}`] = [file, `${type}; charset=utf-8`];
+assets['/game-groups.css']=['game-groups.css','text/css; charset=utf-8'];
 for (const file of ['pinball-engine.mjs','pinball-ui.mjs','pinball.css']) assets[`/${file}`]=[file,`${file.endsWith('.css')?'text/css':'text/javascript'}; charset=utf-8`];
 for (const file of ['roulette-engine.mjs','roulette-ui.mjs','roulette.css']) assets[`/${file}`]=[file,`${file.endsWith('.css')?'text/css':'text/javascript'}; charset=utf-8`];
 for (const file of ['card-engine.mjs','card-ui.mjs','card.css']) assets[`/${file}`]=[file,`${file.endsWith('.css')?'text/css':'text/javascript'}; charset=utf-8`];
