@@ -9,6 +9,7 @@ function drawMap(ctx,map,time){
   for(let y=0;y<HEIGHT;y+=100)line(ctx,24,y,WIDTH-24,y,theme.grid,1);
   line(ctx,24,0,24,HEIGHT,color,5);line(ctx,WIDTH-24,0,WIDTH-24,HEIGHT,color,5);
   for(let y=150,section=1;y<HEIGHT-400;y+=map.sectionHeight,section++){ctx.fillStyle=theme.accent;ctx.font='bold 16px sans-serif';ctx.fillText(`TURN ${String(section).padStart(2,'0')}`,48,y-55);}
+  map.dramaZones.forEach(zone=>{ctx.save();ctx.fillStyle=zone.final?`${theme.accent}22`:`${color}14`;ctx.fillRect(28,zone.y,WIDTH-56,zone.height);ctx.setLineDash([18,14]);line(ctx,42,zone.y+zone.height/2,WIDTH-42,zone.y+zone.height/2,zone.final?theme.accent:color,3);ctx.setLineDash([]);ctx.fillStyle=theme.accent;ctx.font='bold 14px sans-serif';ctx.fillText(zone.final?'LAST CHANCE':'SHUFFLE ZONE',52,zone.y+28);ctx.restore();});
   map.circles.forEach(p=>circle(ctx,p.x,p.y,p.r,theme.grid,color));
   map.segments.forEach(p=>line(ctx,p.ax,p.ay,p.bx,p.by,theme.accent,9));
   map.rotors.forEach(rotor=>{const p=rotorSegment(rotor,time);line(ctx,p.ax,p.ay,p.bx,p.by,color,12);circle(ctx,rotor.x,rotor.y,16,'#eee5ff');});
@@ -23,7 +24,7 @@ export function mapPicker(container){
 }
 export class PinballView {
   constructor(root,race,winners,onFinish){
-    this.root=root;this.race=race;this.winners=winners;this.onFinish=onFinish;this.camera=0;this.speed=1;this.paused=false;this.running=false;this.focus='leader';this.frame=0;this.accumulator=0;this.last=0;this.lastHud=-1;this.destroyed=false;
+    this.root=root;this.race=race;this.winners=winners;this.onFinish=onFinish;this.camera=0;this.speed=1;this.paused=false;this.running=false;this.focus='leader';this.frame=0;this.accumulator=0;this.last=0;this.lastHud=-1;this.destroyed=false;this.previousRanks=new Map();
     root.replaceChildren();const toolbar=make('div','race-toolbar');
     this.timeLabel=make('span','race-clock','00:00');this.stateLabel=make('span','race-state',race.done?'레이스 완료':'출발 대기');
     this.pauseButton=make('button','secondary-button','일시정지');this.pauseButton.disabled=true;this.pauseButton.onclick=()=>{this.paused=!this.paused;this.pauseButton.textContent=this.paused?'계속하기':'일시정지';this.stateLabel.textContent=this.paused?'일시정지':'레이스 진행 중';};
@@ -31,9 +32,9 @@ export class PinballView {
     const focusLabel=make('label','','카메라 '),focus=make('select');focus.setAttribute('aria-label','카메라 추적');const lead=make('option','','선두 따라가기');lead.value='leader';focus.append(lead);race.balls.forEach(ball=>{const option=make('option','',ball.name);option.value=ball.id;focus.append(option);});focus.onchange=()=>{this.focus=focus.value;this.draw();};focusLabel.append(focus);
     toolbar.append(this.timeLabel,this.stateLabel,this.pauseButton,speedLabel,focusLabel);root.append(toolbar);
     const layout=make('div','race-layout'),stage=make('div','race-stage');this.canvas=make('canvas');this.canvas.setAttribute('role','img');this.canvas.setAttribute('aria-label','핀볼 레이스. 공을 따라 화면이 내려갑니다. 순위는 옆의 실시간 순위 목록에서도 확인할 수 있습니다.');stage.append(this.canvas);
-    this.overlay=make('div','race-overlay');this.overlay.append(make('strong','','READY?'),make('span','',`짧고 빠른 코스, 먼저 도착한 ${winners}명이 당첨됩니다.`));stage.append(this.overlay);
+    this.overlay=make('div','race-overlay');this.overlay.append(make('strong','','READY?'),make('span','',`약 1분 동안 선두가 계속 바뀝니다. 먼저 도착한 ${winners}명이 당첨됩니다.`));stage.append(this.overlay);
     const side=make('aside','race-sidebar');side.append(make('h3','','LIVE RANKING'));this.rank=make('ol','race-ranking');side.append(this.rank);const miniTitle=make('h3','','COURSE MAP');this.mini=make('canvas','course-minimap');this.mini.width=140;this.mini.height=390;this.mini.setAttribute('aria-label','전체 코스와 공 위치');this.mini.setAttribute('role','img');side.append(miniTitle,this.mini);layout.append(stage,side);root.append(layout);
-    const note=make('p','race-note','좁은 병목과 회전 날개, 가속 패드가 빠르게 이어져 마지막 구간까지 순위가 바뀔 수 있어요.');root.append(note);
+    const note=make('p','race-note','병목에서 모이고 갈림길에서 흩어진 뒤, 셔플 존에서 다시 맞붙어요. 결승 직전 LAST CHANCE에서도 역전할 수 있어요.');root.append(note);
     this.resize=new ResizeObserver(()=>this.draw());this.resize.observe(stage);this.updateHud();this.draw();
     if(race.done){this.showFinish();this.camera=race.map.height-720;this.draw();}
   }
@@ -49,7 +50,9 @@ export class PinballView {
   showFinish(){this.overlay.hidden=false;this.overlay.replaceChildren(make('strong','','FINISH!'),make('span','finish-winners',this.race.finished.slice(0,this.winners).map(b=>b.name).join(', ')),make('span','','당첨을 축하해요!'));}
   updateHud(){
     const time=Math.floor(this.race.time);this.timeLabel.textContent=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(time%60).padStart(2,'0')}`;
-    this.rank.replaceChildren();this.standings().forEach((ball,i)=>{const row=make('li',ball.finished&&i<this.winners?'rank-winner':'');const dot=make('span','ball-dot');dot.style.background=COLORS[ball.id%COLORS.length];row.append(make('span','rank-number',String(i+1)),dot,make('span','rank-name',ball.name),make('span','rank-status',ball.finished?(i<this.winners?'★':'도착'):'진행'));this.rank.append(row);});
+    const standings=this.standings(),leader=standings.find(ball=>!ball.finished)||standings[0];
+    if(this.running&&!this.paused&&leader)this.stateLabel.textContent=`${leader.name} 선두 · ${this.race.leadChanges}번 선두 교체`;
+    this.rank.replaceChildren();standings.forEach((ball,i)=>{const previous=this.previousRanks.get(ball.id),moved=previous===undefined?'':previous>i?'▲':previous<i?'▼':'';const row=make('li',`${ball.finished&&i<this.winners?'rank-winner ':''}${moved==='▲'?'rank-up':moved==='▼'?'rank-down':''}`.trim());const dot=make('span','ball-dot');dot.style.background=COLORS[ball.id%COLORS.length];const status=ball.finished?(i<this.winners?'★':'도착'):moved||'—';row.append(make('span','rank-number',String(i+1)),dot,make('span','rank-name',ball.name),make('span','rank-status',status));this.rank.append(row);this.previousRanks.set(ball.id,i);});
     this.canvas.setAttribute('aria-label',`핀볼 레이스 ${time}초 경과, ${this.race.finished.length}/${this.race.balls.length}명 도착. 실시간 순위 목록에서 이름을 확인하세요.`);
   }
   draw(){
@@ -58,8 +61,10 @@ export class PinballView {
     if(this.canvas.width!==Math.round(width*dpr)||this.canvas.height!==Math.round(height*dpr)){this.canvas.width=Math.round(width*dpr);this.canvas.height=Math.round(height*dpr);}
     ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#060d19';ctx.fillRect(0,0,width,height);
     const scale=width/WIDTH,viewHeight=height/scale;
-    const target=this.focus==='leader'?this.standings().find(b=>!b.finished)||this.race.finished[0]:this.race.balls.find(b=>String(b.id)===this.focus);
-    const desired=Math.max(0,Math.min(HEIGHT-viewHeight+70,(target?.y||0)-viewHeight*.34));this.camera+=((this.running&&!this.paused? .18:1)*(desired-this.camera));
+    const activeStandings=this.standings().filter(ball=>!ball.finished),target=this.focus==='leader'?activeStandings[0]||this.race.finished[0]:this.race.balls.find(b=>String(b.id)===this.focus);
+    const leadPack=this.focus==='leader'?activeStandings.slice(0,Math.min(4,activeStandings.length)):[];
+    const focusY=leadPack.length?leadPack.reduce((sum,ball)=>sum+ball.y,0)/leadPack.length:(target?.y||0);
+    const desired=Math.max(0,Math.min(HEIGHT-viewHeight+70,focusY-viewHeight*.34));this.camera+=((this.running&&!this.paused? .13:1)*(desired-this.camera));
     ctx.save();ctx.scale(scale,scale);ctx.translate(0,-this.camera);drawMap(ctx,this.race.map,this.race.time);
     this.race.balls.forEach(ball=>{if(ball.finished)return;circle(ctx,ball.x,ball.y,RADIUS,COLORS[ball.id%COLORS.length],'#ffffffaa');ctx.font=`600 ${Math.max(17,12/scale)}px sans-serif`;const label=ball.name.length>9?ball.name.slice(0,8)+'…':ball.name;const tw=ctx.measureText(label).width;const tx=Math.max(28,Math.min(WIDTH-tw-28,ball.x-tw/2));ctx.fillStyle='#071120d9';ctx.fillRect(tx-4,ball.y-44,tw+8,25);ctx.fillStyle='#edf7ff';ctx.fillText(label,tx,ball.y-24);});ctx.restore();
     const mini=this.mini.getContext('2d');mini.clearRect(0,0,140,390);mini.fillStyle='#07101f';mini.fillRect(0,0,140,390);mini.save();mini.scale(140/WIDTH,390/(HEIGHT+80));drawMap(mini,this.race.map,this.race.time);this.race.balls.forEach(ball=>circle(mini,ball.x,ball.y,24,COLORS[ball.id%COLORS.length]));mini.strokeStyle='#ffffffa0';mini.lineWidth=8;mini.strokeRect(16,this.camera,WIDTH-32,Math.min(viewHeight,HEIGHT-this.camera));mini.restore();

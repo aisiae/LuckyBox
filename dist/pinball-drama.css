@@ -1,0 +1,16 @@
+.rank-up {
+  background: #1c4b3a66;
+}
+
+.rank-up .rank-status {
+  color: #65f3a9;
+  font-weight: 900;
+}
+
+.rank-down .rank-status {
+  color: #ff98b2;
+}
+
+.race-state {
+  font-variant-numeric: tabular-nums;
+}
