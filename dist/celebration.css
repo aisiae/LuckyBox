@@ -1,0 +1,140 @@
+.celebration-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(540px, calc(100% - 28px));
+  max-height: min(760px, calc(100dvh - 28px));
+  overflow: hidden;
+  padding: 34px;
+  border-color: #3bd7e8;
+  background: radial-gradient(circle at 50% 0, #18395a 0, #10192c 42%, #090f1e 100%);
+  text-align: center;
+}
+
+.celebration-dialog::backdrop {
+  background: #020611d9;
+  backdrop-filter: blur(7px);
+}
+
+.celebration-dialog .eyebrow {
+  color: #69e6f2;
+  margin-bottom: 8px;
+}
+
+.celebration-icon {
+  display: grid;
+  place-items: center;
+  width: 78px;
+  height: 78px;
+  margin: 0 auto 16px;
+  border: 1px solid #55e4ef;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #104b61, #51399c);
+  box-shadow: 0 0 34px #3cddec66;
+  font-size: 38px;
+}
+
+.celebration-dialog h2 {
+  color: #f4f8ff;
+  font-size: 28px;
+}
+
+.celebration-message {
+  margin: 12px 0 22px;
+  color: #a9bfd8;
+  line-height: 1.8;
+}
+
+.celebration-results {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  max-height: min(310px, 38dvh);
+  overflow-y: auto;
+  margin-bottom: 24px;
+  padding: 4px;
+  scrollbar-width: thin;
+}
+
+.celebration-winners {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.celebration-winner {
+  padding: 13px 18px;
+  border: 1px solid #57e2c1;
+  border-radius: 999px;
+  background: #103d38;
+  color: #8effd9;
+  font-size: 19px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.celebration-result-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(90px, auto);
+  gap: 14px;
+  align-items: center;
+  padding: 11px 13px;
+  border: 1px solid #293d58;
+  border-radius: 10px;
+  background: #0a1424cc;
+  text-align: left;
+}
+
+.celebration-result-row span {
+  overflow-wrap: anywhere;
+}
+
+.celebration-result-row strong {
+  color: #83ebd1;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.celebration-dialog .primary-button {
+  width: 100%;
+}
+
+.confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti span {
+  position: absolute;
+  top: -24px;
+  left: var(--x);
+  width: 8px;
+  height: 17px;
+  border-radius: 3px;
+  background: var(--color);
+  opacity: 0;
+  transform: rotate(var(--rotate));
+}
+
+.celebration-dialog.celebrating .confetti span {
+  animation: confetti-fall 1.9s var(--delay) cubic-bezier(.18,.65,.4,1) forwards;
+}
+
+@keyframes confetti-fall {
+  10% { opacity: 1; }
+  to { opacity: 0; transform: translate(var(--drift), 660px) rotate(calc(var(--rotate) + 540deg)); }
+}
+
+@media (max-width: 720px) {
+  .celebration-dialog { padding: 28px 20px 22px; }
+  .celebration-icon { width: 66px; height: 66px; font-size: 32px; }
+  .celebration-dialog h2 { font-size: 24px; }
+  .celebration-results { max-height: 34dvh; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .celebration-dialog.celebrating .confetti span { animation: none; }
+}

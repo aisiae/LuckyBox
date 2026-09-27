@@ -24,6 +24,20 @@ function element(tag,className,text) {const node=document.createElement(tag);if(
 function notify(text){$('#toast').textContent=text;$('#toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('visible'),3000);}
 function options(select, count, suffix, value=1) {select.replaceChildren();for(let i=1;i<=count;i++){const option=element('option','',`${i}${suffix}`);option.value=i;select.append(option);} select.value=String(Math.min(Math.max(1,value),count));}
 const groupName=index=>groupLabels[index]||`${index+1}조`;
+function showCelebration(round){
+  if(!round?.done||round.celebrated)return;round.celebrated=true;
+  const index=rounds.indexOf(round),dialog=$('#celebration-dialog'),results=$('#celebration-results'),label=groupName(index);
+  results.replaceChildren();$('#celebration-title').textContent=kind==='ladder'?`${label} 결과 공개 완료!`:'축하합니다!';
+  if(kind==='ladder'){
+    $('#celebration-message').textContent=`${label}의 모든 결과를 확인했어요.`;
+    round.ladder.paths.forEach(path=>{const row=element('div','celebration-result-row');row.append(element('span','',path.name),element('strong','',path.result));results.append(row);});
+  }else{
+    const winners=round.ladder.paths.filter(path=>path.winner).map(path=>path.name),wrap=element('div','celebration-winners');
+    winners.forEach(name=>wrap.append(element('span','celebration-winner',`★ ${name}`)));results.append(wrap);
+    $('#celebration-message').textContent=`${label}의 ${winners.length>1?'행운의 주인공들을':'행운의 주인공을'} 축하해주세요!`;
+  }
+  results.scrollTop=0;dialog.classList.remove('celebrating');void dialog.offsetWidth;dialog.classList.add('celebrating');dialog.showModal();$('#close-celebration').focus();
+}
 function syncGroupResults(reset=false){
   groupResults=groups.map((members,index)=>{
     const previous=reset?[]:(groupResults[index]||[]),next=previous.slice(0,members.length);
@@ -62,7 +76,7 @@ function drawBoard(round,animateStart=null){
 }
 function revealLadderPerson(start){
   const round=rounds[active];if(busy||round.revealed.has(start))return;busy=true;round.lastRevealed=null;renderTabs();drawBoard(round,start);$('#reveal-bar').textContent='선택한 길을 따라가는 중…';
-  setTimeout(()=>{round.revealed.add(start);round.lastRevealed=start;round.done=round.revealed.size===round.ladder.names.length;busy=false;renderPlay();renderResults();},matchMedia('(prefers-reduced-motion: reduce)').matches?0:2050);
+  setTimeout(()=>{round.revealed.add(start);round.lastRevealed=start;round.done=round.revealed.size===round.ladder.names.length;busy=false;renderPlay();renderResults();showCelebration(round);},matchMedia('(prefers-reduced-motion: reduce)').matches?0:2050);
 }
 function renderPlay(){
   if(isPinball){renderPinball();return;}
@@ -83,7 +97,7 @@ function renderSlots(){
   renderTabs();const round=rounds[active];$('#group-kicker').textContent=`GROUP ${String(active+1).padStart(2,'0')} · LUCKY SLOTS`;
   $('#active-group-title').textContent=`${groupName(active)} · ${round.slots.names.length}명 중 ${round.slots.winnerCount}명 추첨`;
   $('#play-hint').textContent='세 개의 릴이 같은 이름에 멈추면 당첨이에요. 여러 명을 뽑을 때는 한 번씩 레버를 당겨주세요.';slotControls(round);
-  slotView?.destroy();slotView=new SlotView($('#slot-stage'),round.slots,slots=>{busy=false;round.done=slots.done;round.ladder.paths=slots.names.map(name=>({name,winner:slots.winners.includes(name)}));$('#edit-setup').disabled=false;slotControls(round);renderTabs();renderResults();});
+  slotView?.destroy();slotView=new SlotView($('#slot-stage'),round.slots,slots=>{busy=false;round.done=slots.done;round.ladder.paths=slots.names.map(name=>({name,winner:slots.winners.includes(name)}));$('#edit-setup').disabled=false;slotControls(round);renderTabs();renderResults();showCelebration(round);});
 }
 function renderCards(){
   renderTabs();const round=rounds[active];$('#group-kicker').textContent=`GROUP ${String(active+1).padStart(2,'0')} · PICK A CARD`;
@@ -94,7 +108,7 @@ function renderCards(){
   cardView?.destroy();cardView=new CardView($('#card-stage'),round.cards,(state,card)=>{
     round.lastCard=card;round.done=state.done;round.ladder.paths=state.cards.map(item=>({name:item.name,winner:item.winner,revealed:item.revealed}));
     $('#reveal-bar').textContent=`${card.name} → ${card.winner?'★ 당첨':'꽝'}`;$('#next-group').hidden=!round.done||rounds.every(r=>r.done);
-    renderTabs();renderResults();$('#card-stage .cards-progress').textContent=`${state.revealedCount} / ${state.cards.length}장 공개`;
+    renderTabs();renderResults();$('#card-stage .cards-progress').textContent=`${state.revealedCount} / ${state.cards.length}장 공개`;showCelebration(round);
   });
   $('#card-stage').append(element('p','cards-progress',`${round.cards.revealedCount} / ${round.cards.cards.length}장 공개`));
 }
@@ -110,7 +124,7 @@ function renderPinball(){
     round.done=true;busy=false;round.ladder.paths=race.finished.map((ball,index)=>({name:ball.name,winner:index<round.winners,rank:index+1}));$('#edit-setup').disabled=false;
     $('#run-group').textContent='레이스 완료';$('#run-group').disabled=true;
     $('#reveal-bar').textContent=`★ ${round.ladder.paths.filter(p=>p.winner).map(p=>p.name).join(', ')} 당첨!`;
-    $('#next-group').hidden=rounds.every(r=>r.done);renderTabs();renderResults();
+    $('#next-group').hidden=rounds.every(r=>r.done);renderTabs();renderResults();showCelebration(round);
   });
 }
 function rouletteControls(round){
@@ -124,7 +138,7 @@ function renderRoulette(){
   $('#play-hint').textContent='위쪽 화살표가 가리키는 사람이 당첨돼요. 여러 명을 뽑을 때는 한 번씩 돌려주세요.';rouletteControls(round);
   rouletteView?.destroy();rouletteView=new RouletteView($('#roulette-stage'),round.wheel,wheel=>{
     busy=false;round.done=wheel.done;round.ladder.paths=wheel.names.map(name=>({name,winner:wheel.winners.includes(name)}));
-    $('#edit-setup').disabled=false;rouletteControls(round);renderTabs();renderResults();
+    $('#edit-setup').disabled=false;rouletteControls(round);renderTabs();renderResults();showCelebration(round);
   });
 }
 function renderResults(){
@@ -151,6 +165,7 @@ $('#run-group').onclick=()=>{
 };
 $('#next-group').onclick=()=>{const next=rounds.findIndex((r,i)=>i>active&&!r.done);active=next>=0?next:rounds.findIndex(r=>!r.done);renderPlay();$('#play-section').scrollIntoView({behavior:'smooth'});};
 $('#edit-setup').onclick=()=>$('#new-round-dialog').showModal();$('#cancel-new').onclick=()=>$('#new-round-dialog').close();
+$('#close-celebration').onclick=()=>$('#celebration-dialog').close();$('#celebration-dialog').addEventListener('close',()=>$('#celebration-dialog').classList.remove('celebrating'));
 $('#confirm-new').onclick=()=>{pinballView?.destroy();rouletteView?.destroy();cardView?.destroy();slotView?.destroy();rounds=[];active=0;$('#new-round-dialog').close();$('#setup-controls').hidden=false;$('#locked-description').hidden=true;$('#edit-setup').hidden=true;$('#play-section').hidden=true;renderResults();$('#setup-title').scrollIntoView({behavior:'smooth'});};
 $('#copy-results').onclick=async()=>{const text=kind==='ladder'?[`LuckyBox · ${titles[kind]}`,...rounds.flatMap((r,i)=>[groupName(i),...r.ladder.paths.map(path=>`- ${path.name}: ${r.revealed.has(path.start)?path.result:'미확인'}`)])]:isCards?[`LuckyBox · ${titles[kind]}`,...rounds.flatMap((r,i)=>[groupName(i),...r.ladder.paths.map(path=>`- ${path.name}: ${path.revealed?(path.winner?'당첨':'꽝'):'미확인'}`)])]:[`LuckyBox · ${titles[kind]}`,...rounds.map((r,i)=>{const draw=r.wheel||r.slots;return `${groupName(i)}: ${r.done?r.ladder.paths.filter(p=>p.winner).map(p=>p.name).join(', ')+' 당첨':draw?.winners.length?draw.winners.join(', ')+` 당첨 (${draw.winnerCount-draw.winners.length}명 추가 추첨 대기)`:'미진행'}`;})];try{await navigator.clipboard.writeText(text.join('\n'));notify('그룹별 결과를 복사했어요.');}catch{notify('복사 권한이 없어요. 결과의 텍스트를 직접 선택해 복사해주세요.');}};
 document.title=`${titles[kind]||'게임'} · LuckyBox`;$('#game-title').textContent=titles[kind]||'게임';
