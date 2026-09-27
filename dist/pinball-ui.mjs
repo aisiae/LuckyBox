@@ -12,7 +12,7 @@ function drawMap(ctx,map,time){
   map.dramaZones.forEach(zone=>{ctx.save();ctx.fillStyle=zone.final?`${theme.accent}22`:`${color}14`;ctx.fillRect(28,zone.y,WIDTH-56,zone.height);ctx.setLineDash([18,14]);line(ctx,42,zone.y+zone.height/2,WIDTH-42,zone.y+zone.height/2,zone.final?theme.accent:color,3);ctx.setLineDash([]);ctx.fillStyle=theme.accent;ctx.font='bold 14px sans-serif';ctx.fillText(zone.final?'LAST CHANCE':'SHUFFLE ZONE',52,zone.y+28);ctx.restore();});
   map.circles.forEach(p=>circle(ctx,p.x,p.y,p.r,theme.grid,color));
   map.segments.forEach(p=>line(ctx,p.ax,p.ay,p.bx,p.by,theme.accent,9));
-  map.rotors.forEach(rotor=>{const p=rotorSegment(rotor,time);line(ctx,p.ax,p.ay,p.bx,p.by,color,12);circle(ctx,rotor.x,rotor.y,16,'#eee5ff');});
+  map.rotors.forEach(rotor=>{const p=rotorSegment(rotor,time);ctx.save();ctx.shadowColor=color;ctx.shadowBlur=13;line(ctx,p.ax,p.ay,p.bx,p.by,color,14);ctx.restore();circle(ctx,p.ax,p.ay,8,color);circle(ctx,p.bx,p.by,8,color);circle(ctx,rotor.x,rotor.y,17,'#eee5ff');});
   map.pads.forEach(pad=>{ctx.shadowColor=theme.accent;ctx.shadowBlur=14;ctx.fillStyle=theme.accent;ctx.fillRect(pad.x,pad.y,pad.w,pad.h);ctx.shadowBlur=0;for(let x=pad.x+18;x<pad.x+pad.w-8;x+=38){line(ctx,x,pad.y+pad.h/2,x+13,pad.y+pad.h/2,'#06111c',4);line(ctx,x+13,pad.y+pad.h/2,x+5,pad.y+2,'#06111c',3);}});
   for(let i=0;i<20;i++){ctx.fillStyle=i%2?'#e5efff':'#1d344c';ctx.fillRect(24+i*(WIDTH-48)/20,HEIGHT-14,(WIDTH-48)/20,14);}
   ctx.fillStyle='#8de9d7';ctx.font='bold 26px sans-serif';ctx.fillText('FINISH',WIDTH/2-48,HEIGHT-34);
@@ -34,7 +34,7 @@ export class PinballView {
     const layout=make('div','race-layout'),stage=make('div','race-stage');this.canvas=make('canvas');this.canvas.setAttribute('role','img');this.canvas.setAttribute('aria-label','핀볼 레이스. 공을 따라 화면이 내려갑니다. 순위는 옆의 실시간 순위 목록에서도 확인할 수 있습니다.');stage.append(this.canvas);
     this.overlay=make('div','race-overlay');this.overlay.append(make('strong','','READY?'),make('span','',`약 1분 동안 선두가 계속 바뀝니다. 먼저 도착한 ${winners}명이 당첨됩니다.`));stage.append(this.overlay);
     const side=make('aside','race-sidebar');side.append(make('h3','','LIVE RANKING'));this.rank=make('ol','race-ranking');side.append(this.rank);const miniTitle=make('h3','','COURSE MAP');this.mini=make('canvas','course-minimap');this.mini.width=140;this.mini.height=390;this.mini.setAttribute('aria-label','전체 코스와 공 위치');this.mini.setAttribute('role','img');side.append(miniTitle,this.mini);layout.append(stage,side);root.append(layout);
-    const note=make('p','race-note','병목에서 모이고 갈림길에서 흩어진 뒤, 셔플 존에서 다시 맞붙어요. 결승 직전 LAST CHANCE에서도 역전할 수 있어요.');root.append(note);
+    const note=make('p','race-note','회전 막대가 공을 붙잡아 위로 끌어 올리기도 해요. 좁은 통로와 큰 갈림길, 셔플 존을 지나 결승 직전까지 순위가 바뀝니다.');root.append(note);
     this.resize=new ResizeObserver(()=>this.draw());this.resize.observe(stage);this.updateHud();this.draw();
     if(race.done){this.showFinish();this.camera=race.map.height-720;this.draw();}
   }
@@ -66,7 +66,7 @@ export class PinballView {
     const focusY=leadPack.length?leadPack.reduce((sum,ball)=>sum+ball.y,0)/leadPack.length:(target?.y||0);
     const desired=Math.max(0,Math.min(HEIGHT-viewHeight+70,focusY-viewHeight*.34));this.camera+=((this.running&&!this.paused? .13:1)*(desired-this.camera));
     ctx.save();ctx.scale(scale,scale);ctx.translate(0,-this.camera);drawMap(ctx,this.race.map,this.race.time);
-    this.race.balls.forEach(ball=>{if(ball.finished)return;circle(ctx,ball.x,ball.y,RADIUS,COLORS[ball.id%COLORS.length],'#ffffffaa');ctx.font=`600 ${Math.max(17,12/scale)}px sans-serif`;const label=ball.name.length>9?ball.name.slice(0,8)+'…':ball.name;const tw=ctx.measureText(label).width;const tx=Math.max(28,Math.min(WIDTH-tw-28,ball.x-tw/2));ctx.fillStyle='#071120d9';ctx.fillRect(tx-4,ball.y-44,tw+8,25);ctx.fillStyle='#edf7ff';ctx.fillText(label,tx,ball.y-24);});ctx.restore();
+    this.race.balls.forEach(ball=>{if(ball.finished)return;ctx.save();if(ball.grab){ctx.shadowColor=COLORS[ball.id%COLORS.length];ctx.shadowBlur=22;circle(ctx,ball.x,ball.y,RADIUS+2,COLORS[ball.id%COLORS.length],'#ffffff');}else circle(ctx,ball.x,ball.y,RADIUS,COLORS[ball.id%COLORS.length],'#ffffffaa');ctx.restore();ctx.font=`600 ${Math.max(17,12/scale)}px sans-serif`;const label=ball.name.length>9?ball.name.slice(0,8)+'…':ball.name;const tw=ctx.measureText(label).width;const tx=Math.max(28,Math.min(WIDTH-tw-28,ball.x-tw/2));ctx.fillStyle='#071120d9';ctx.fillRect(tx-4,ball.y-44,tw+8,25);ctx.fillStyle='#edf7ff';ctx.fillText(label,tx,ball.y-24);});ctx.restore();
     const mini=this.mini.getContext('2d');mini.clearRect(0,0,140,390);mini.fillStyle='#07101f';mini.fillRect(0,0,140,390);mini.save();mini.scale(140/WIDTH,390/(HEIGHT+80));drawMap(mini,this.race.map,this.race.time);this.race.balls.forEach(ball=>circle(mini,ball.x,ball.y,24,COLORS[ball.id%COLORS.length]));mini.strokeStyle='#ffffffa0';mini.lineWidth=8;mini.strokeRect(16,this.camera,WIDTH-32,Math.min(viewHeight,HEIGHT-this.camera));mini.restore();
   }
   destroy(){this.destroyed=true;cancelAnimationFrame(this.frame);this.resize.disconnect();}

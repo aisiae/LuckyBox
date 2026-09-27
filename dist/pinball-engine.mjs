@@ -22,25 +22,55 @@ export function makeMap(id,length='standard') {
   const circles=[],segments=[],rotors=[],pads=[],dramaZones=[];
   const sections=LENGTHS[length].sections,sectionHeight=900;
   for(let section=0;section<sections;section++){
-    const base=150+section*sectionHeight,flip=section%2?-1:1;
+    const base=150+section*sectionHeight,flip=section%2?-1:1,variant=section%3;
     dramaZones.push({id:`mix-${section}`,y:base+775,height:90});
     if(id==='garden'){
-      segments.push(segment(28,base,325,base+165),segment(772,base,475,base+165));
-      for(let row=0;row<4;row++)for(let col=0;col<5;col++)circles.push(peg(120+col*140+(row%2)*68,base+235+row*88,17+(row+col)%3*4));
-      rotors.push({x:400,y:base+615,length:170,speed:flip*.82,phase:section*.9,bounce:.9});
+      if(variant===0){
+        segments.push(segment(28,base,315,base+155),segment(772,base,485,base+155));
+        for(let row=0;row<3;row++)for(let col=0;col<5;col++)circles.push(peg(130+col*135+(row%2)*62,base+250+row*90,18+(row+col)%2*5));
+        rotors.push({x:400,y:base+605,length:178,speed:flip*.84,phase:section*.9,bounce:.9});
+      }else if(variant===1){
+        segments.push(segment(28,base+35,250,base+145),segment(250,base+145,145,base+300),segment(772,base+80,535,base+210),segment(535,base+210,655,base+365));
+        circles.push(peg(330,base+300,24),peg(470,base+390,24),peg(265,base+500,20),peg(590,base+525,27));
+        rotors.push({x:365,y:base+610,length:155,speed:-flip*1.02,phase:section*.75,bounce:.92});
+      }else{
+        segments.push(segment(400,base+90,230,base+285),segment(400,base+90,570,base+285),segment(230,base+285,335,base+450),segment(570,base+285,465,base+450));
+        circles.push(peg(145,base+265,31),peg(655,base+265,31),peg(400,base+500,26));
+        rotors.push({x:245,y:base+610,length:125,speed:flip*1.1,phase:section,bounce:.93},{x:555,y:base+610,length:125,speed:-flip*1.1,phase:section+1.4,bounce:.93});
+      }
       segments.push(segment(28,base+705,285,base+770),segment(772,base+705,515,base+770));
       pads.push(pad(`g-left-${section}`,95,base+805,220,flip*115),pad(`g-right-${section}`,485,base+805,220,-flip*115));
     }else if(id==='factory'){
-      segments.push(flip>0?segment(28,base,590,base+190):segment(772,base,210,base+190));
-      circles.push(peg(125,base+265,31),peg(400,base+290,24),peg(675,base+265,31));
-      rotors.push({x:245,y:base+465,length:135,speed:flip*1.15,phase:section,bounce:.94},{x:555,y:base+535,length:135,speed:-flip*1.08,phase:section+1.35,bounce:.94});
+      if(variant===0){
+        segments.push(flip>0?segment(28,base,590,base+190):segment(772,base,210,base+190));
+        circles.push(peg(125,base+270,31),peg(400,base+300,24),peg(675,base+270,31));
+        rotors.push({x:245,y:base+475,length:145,speed:flip*1.08,phase:section,bounce:.94},{x:555,y:base+535,length:145,speed:-flip*1.02,phase:section+1.35,bounce:.94});
+      }else if(variant===1){
+        segments.push(segment(28,base+45,260,base+125),segment(260,base+125,175,base+285),segment(772,base+45,540,base+125),segment(540,base+125,625,base+285));
+        rotors.push({x:400,y:base+330,length:205,speed:flip*.78,phase:section+.4,bounce:.96});
+        for(let col=0;col<5;col++)circles.push(peg(140+col*130,base+540+(col%2)*55,19));
+      }else{
+        segments.push(segment(170,base+70,360,base+260),segment(630,base+70,440,base+260),segment(340,base+260,250,base+445),segment(460,base+260,550,base+445));
+        circles.push(peg(115,base+390,34),peg(685,base+390,34));
+        rotors.push({x:265,y:base+585,length:135,speed:-flip*1.18,phase:section+.2,bounce:.95},{x:535,y:base+585,length:135,speed:flip*1.18,phase:section+1.1,bounce:.95});
+      }
       segments.push(segment(28,base+665,330,base+755),segment(772,base+665,470,base+755));
       pads.push(pad(`f-left-${section}`,70,base+805,275,flip*135),pad(`f-right-${section}`,455,base+805,275,-flip*135));
     }else{
-      segments.push(flip>0?segment(40,base,455,base+125):segment(760,base,345,base+125));
-      circles.push(peg(flip>0?655:145,base+225,38),peg(flip>0?175:625,base+365,29),peg(400,base+445,25));
-      segments.push(flip>0?segment(755,base+340,455,base+480):segment(45,base+340,345,base+480));
-      rotors.push({x:400,y:base+640,length:165,speed:flip*.88,phase:section+.45,bounce:.92});
+      if(variant===0){
+        segments.push(flip>0?segment(40,base,455,base+125):segment(760,base,345,base+125));
+        circles.push(peg(flip>0?655:145,base+230,38),peg(flip>0?175:625,base+380,29),peg(400,base+470,25));
+        segments.push(flip>0?segment(755,base+345,455,base+485):segment(45,base+345,345,base+485));
+        rotors.push({x:400,y:base+640,length:172,speed:flip*.86,phase:section+.45,bounce:.92});
+      }else if(variant===1){
+        segments.push(segment(28,base+25,210,base+130),segment(210,base+130,95,base+300),segment(95,base+300,300,base+430),segment(772,base+55,610,base+165),segment(610,base+165,730,base+335),segment(730,base+335,520,base+470));
+        rotors.push({x:315,y:base+570,length:150,speed:-flip*.98,phase:section,bounce:.94});
+        circles.push(peg(555,base+585,34));
+      }else{
+        segments.push(segment(28,base+40,300,base+170),segment(772,base+40,500,base+170),segment(300,base+170,180,base+350),segment(500,base+170,620,base+350));
+        for(let row=0;row<2;row++)for(let col=0;col<4;col++)circles.push(peg(190+col*140+(row%2)*65,base+425+row*92,18));
+        rotors.push({x:400,y:base+650,length:185,speed:flip*.8,phase:section+.6,bounce:.94});
+      }
       pads.push(pad(`c-left-${section}`,85,base+805,245,flip*145),pad(`c-right-${section}`,470,base+805,245,-flip*145));
     }
   }
@@ -50,7 +80,8 @@ export function makeMap(id,length='standard') {
   rotors.push({x:400,y:finalY+470,length:155,speed:-.95,phase:1.2,bounce:.95});
   dramaZones.push({id:'final-mix',y:finalY+540,height:110,final:true});
   pads.push(pad('final-left',70,finalY+565,265,150,150),pad('final-right',465,finalY+565,265,-150,150));
-  return {id,length,height:finalY+790,sectionHeight,circles,segments,rotors,pads,dramaZones};
+  rotors.forEach((rotor,index)=>rotor.id=`${id}-rotor-${index}`);
+  return {id,length,height:finalY+790,sectionHeight,circles,segments,rotors,pads,dramaZones,pace:id==='garden'?1.12:1};
 }
 
 export function rotorSegment(rotor,time){
@@ -61,7 +92,7 @@ export function rotorSegment(rotor,time){
 export function createRace(names,mapId,length='standard'){
   if(names.length<2||names.length>50||new Set(names).size!==names.length)throw new Error('참가자는 서로 다른 2~50명이어야 해요.');
   const order=shuffle(names);
-  return{map:makeMap(mapId,length),time:0,finished:[],leadChanges:0,lastLeader:null,balls:order.map((name,i)=>({name,id:names.indexOf(name),x:75+randomInt(650),y:32-Math.floor(i/12)*28,vx:randomInt(101)-50,vy:20,bestY:-200,stall:0,padCooldown:0,dramaHits:new Set(),finished:false})),done:false};
+  return{map:makeMap(mapId,length),time:0,finished:[],leadChanges:0,rotorLifts:0,lastLeader:null,balls:order.map((name,i)=>({name,id:names.indexOf(name),x:75+randomInt(650),y:32-Math.floor(i/12)*28,vx:randomInt(101)-50,vy:20,bestY:-200,stall:0,padCooldown:0,rotorCooldown:0,grab:null,dramaHits:new Set(),finished:false})),done:false};
 }
 
 function collide(ball,x,y,r,vx=0,vy=0,bounce=.66){
@@ -78,7 +109,33 @@ function segmentCollision(ball,wall){
   const dx=wall.bx-wall.ax,dy=wall.by-wall.ay;
   const t=Math.max(0,Math.min(1,((ball.x-wall.ax)*dx+(ball.y-wall.ay)*dy)/(dx*dx+dy*dy)));
   const x=wall.ax+t*dx,y=wall.ay+t*dy,rotor=wall.rotor;
+  const distance=Math.hypot(ball.x-x,ball.y-y);
+  if(distance>=RADIUS+5)return;
+  if(rotor&&!ball.grab&&!ball.rotorCooldown){
+    const angle=Math.atan2(dy,dx),cos=Math.cos(angle),sin=Math.sin(angle);
+    const along=(x-rotor.x)*cos+(y-rotor.y)*sin;
+    const pointVy=(cos*along)*rotor.speed;
+    if(pointVy<-26&&Math.abs(along)>42){
+      const side=((ball.x-x)*-sin+(ball.y-y)*cos)>=0?1:-1;
+      ball.grab={rotor,along,side,elapsed:0,startY:ball.y};
+      ball.vx=0;ball.vy=0;
+      return;
+    }
+  }
   collide(ball,x,y,5,rotor?-(y-rotor.y)*rotor.speed:0,rotor?(x-rotor.x)*rotor.speed:0,wall.bounce??.28);
+}
+
+function advanceRotorGrab(ball,time,dt,race){
+  const grab=ball.grab;if(!grab)return false;
+  const {rotor,along,side}=grab,angle=time*rotor.speed+rotor.phase,cos=Math.cos(angle),sin=Math.sin(angle),normal=side*(RADIUS+6);
+  ball.x=rotor.x+cos*along-sin*normal;ball.y=rotor.y+sin*along+cos*normal;
+  const tangentX=(-sin*along-cos*normal)*rotor.speed,tangentY=(cos*along-sin*normal)*rotor.speed;
+  ball.vx=tangentX;ball.vy=tangentY;grab.elapsed+=dt;ball.stall=0;
+  const release=(grab.elapsed>.38&&tangentY>18)||grab.elapsed>1.05;
+  if(!release)return true;
+  if(grab.startY-ball.y>24)race.rotorLifts++;
+  ball.grab=null;ball.rotorCooldown=1.05;ball.vx=tangentX*1.18;ball.vy=tangentY*1.18-18;
+  return false;
 }
 
 function enterDramaZone(ball,zone,rank,total){
@@ -103,10 +160,12 @@ export function stepRace(race,dt=1/120){
   const leaderY=leader?.y||0,arrivals=[];
   for(const ball of race.balls){
     if(ball.finished)continue;
+    ball.rotorCooldown=Math.max(0,ball.rotorCooldown-dt);
+    if(advanceRotorGrab(ball,race.time,dt,race))continue;
     const oldY=ball.y,rank=ranks.get(ball)||0,gap=Math.max(0,leaderY-ball.y),draft=1+Math.min(.24,gap/1400);
     const inFinalShuffle=ball.y>race.map.height-760&&race.time<52;
-    const speedLimit=inFinalShuffle?62:155;
-    ball.vy=Math.min(speedLimit,ball.vy+250*draft*dt);
+    const speedLimit=(inFinalShuffle?62:155)*race.map.pace;
+    ball.vy=Math.min(speedLimit,ball.vy+250*race.map.pace*draft*dt);
     ball.vx*=Math.exp(-.12*dt);ball.padCooldown=Math.max(0,ball.padCooldown-dt);
     ball.x+=ball.vx*dt;ball.y+=ball.vy*dt;
     for(const pegItem of race.map.circles)if(Math.abs(ball.y-pegItem.y)<pegItem.r+RADIUS+5)collide(ball,pegItem.x,pegItem.y,pegItem.r,0,0,pegItem.bounce);
@@ -115,7 +174,7 @@ export function stepRace(race,dt=1/120){
     for(const zone of race.map.dramaZones)if(oldY<zone.y&&ball.y>=zone.y)enterDramaZone(ball,zone,rank,active.length);
     if(ball.x<RADIUS+24){ball.x=RADIUS+24;ball.vx=Math.abs(ball.vx)*.82;}
     if(ball.x>WIDTH-RADIUS-24){ball.x=WIDTH-RADIUS-24;ball.vx=-Math.abs(ball.vx)*.82;}
-    ball.vx=Math.max(-310,Math.min(310,ball.vx));ball.vy=Math.max(-175,Math.min(inFinalShuffle?68:160,ball.vy));
+    ball.vx=Math.max(-310,Math.min(310,ball.vx));ball.vy=Math.max(-175,Math.min((inFinalShuffle?68:160)*race.map.pace,ball.vy));
     if(ball.y>ball.bestY+9){ball.bestY=ball.y;ball.stall=0;}else ball.stall+=dt;
     if(ball.stall>1.8){ball.vx+=(randomInt(2)?1:-1)*(95+randomInt(80));ball.vy=92;ball.stall=0;}
     if(ball.y>=race.map.height){ball.finished=true;ball.finishTime=race.time-dt+dt*Math.max(0,Math.min(1,(race.map.height-oldY)/(ball.y-oldY||1)));ball.y=race.map.height;arrivals.push(ball);}
