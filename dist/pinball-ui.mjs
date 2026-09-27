@@ -8,16 +8,17 @@ function drawMap(ctx,map,time){
   ctx.fillStyle=theme.surface;ctx.fillRect(24,0,WIDTH-48,HEIGHT);
   for(let y=0;y<HEIGHT;y+=100)line(ctx,24,y,WIDTH-24,y,theme.grid,1);
   line(ctx,24,0,24,HEIGHT,color,5);line(ctx,WIDTH-24,0,WIDTH-24,HEIGHT,color,5);
-  for(let y=250,section=1;y<HEIGHT-550;y+=1300,section++){ctx.fillStyle=theme.accent;ctx.font='bold 18px sans-serif';ctx.fillText(`SECTOR ${String(section).padStart(2,'0')}`,48,y-70);}
+  for(let y=150,section=1;y<HEIGHT-400;y+=map.sectionHeight,section++){ctx.fillStyle=theme.accent;ctx.font='bold 16px sans-serif';ctx.fillText(`TURN ${String(section).padStart(2,'0')}`,48,y-55);}
   map.circles.forEach(p=>circle(ctx,p.x,p.y,p.r,theme.grid,color));
   map.segments.forEach(p=>line(ctx,p.ax,p.ay,p.bx,p.by,theme.accent,9));
   map.rotors.forEach(rotor=>{const p=rotorSegment(rotor,time);line(ctx,p.ax,p.ay,p.bx,p.by,color,12);circle(ctx,rotor.x,rotor.y,16,'#eee5ff');});
+  map.pads.forEach(pad=>{ctx.shadowColor=theme.accent;ctx.shadowBlur=14;ctx.fillStyle=theme.accent;ctx.fillRect(pad.x,pad.y,pad.w,pad.h);ctx.shadowBlur=0;for(let x=pad.x+18;x<pad.x+pad.w-8;x+=38){line(ctx,x,pad.y+pad.h/2,x+13,pad.y+pad.h/2,'#06111c',4);line(ctx,x+13,pad.y+pad.h/2,x+5,pad.y+2,'#06111c',3);}});
   for(let i=0;i<20;i++){ctx.fillStyle=i%2?'#e5efff':'#1d344c';ctx.fillRect(24+i*(WIDTH-48)/20,HEIGHT-14,(WIDTH-48)/20,14);}
   ctx.fillStyle='#8de9d7';ctx.font='bold 26px sans-serif';ctx.fillText('FINISH',WIDTH/2-48,HEIGHT-34);
 }
 export function mapPicker(container){
   let selected='garden';const root=make('div','map-options');
-  MAPS.forEach((map,index)=>{const button=make('button','map-option');button.type='button';button.setAttribute('aria-pressed',String(index===0));button.setAttribute('aria-label',`${map.name} 선택`);const canvas=make('canvas');canvas.width=400;canvas.height=160;canvas.setAttribute('aria-hidden','true');const ctx=canvas.getContext('2d');ctx.fillStyle='#080f1f';ctx.fillRect(0,0,400,160);ctx.save();ctx.scale(.5,.5);ctx.translate(0,-250);const preview=makeMap(map.id);drawMap(ctx,preview,1,75);ctx.restore();button.append(canvas,make('span','map-tag',map.tag),make('strong','',map.name),make('span','map-description',map.description));button.onclick=()=>{selected=map.id;root.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));};root.append(button);});
+  MAPS.forEach((map,index)=>{const button=make('button','map-option');button.type='button';button.setAttribute('aria-pressed',String(index===0));button.setAttribute('aria-label',`${map.name} 선택`);const canvas=make('canvas');canvas.width=400;canvas.height=160;canvas.setAttribute('aria-hidden','true');const ctx=canvas.getContext('2d');ctx.fillStyle='#080f1f';ctx.fillRect(0,0,400,160);ctx.save();ctx.scale(.5,.5);ctx.translate(0,-80);const preview=makeMap(map.id);drawMap(ctx,preview,1,75);ctx.restore();button.append(canvas,make('span','map-tag',map.tag),make('strong','',map.name),make('span','map-description',map.description));button.onclick=()=>{selected=map.id;root.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));};root.append(button);});
   container.append(root);return()=>selected;
 }
 export class PinballView {
@@ -30,11 +31,11 @@ export class PinballView {
     const focusLabel=make('label','','카메라 '),focus=make('select');focus.setAttribute('aria-label','카메라 추적');const lead=make('option','','선두 따라가기');lead.value='leader';focus.append(lead);race.balls.forEach(ball=>{const option=make('option','',ball.name);option.value=ball.id;focus.append(option);});focus.onchange=()=>{this.focus=focus.value;this.draw();};focusLabel.append(focus);
     toolbar.append(this.timeLabel,this.stateLabel,this.pauseButton,speedLabel,focusLabel);root.append(toolbar);
     const layout=make('div','race-layout'),stage=make('div','race-stage');this.canvas=make('canvas');this.canvas.setAttribute('role','img');this.canvas.setAttribute('aria-label','핀볼 레이스. 공을 따라 화면이 내려갑니다. 순위는 옆의 실시간 순위 목록에서도 확인할 수 있습니다.');stage.append(this.canvas);
-    this.overlay=make('div','race-overlay');this.overlay.append(make('strong','','READY?'),make('span','',`먼저 도착한 ${winners}명이 당첨됩니다.`));stage.append(this.overlay);
+    this.overlay=make('div','race-overlay');this.overlay.append(make('strong','','READY?'),make('span','',`짧고 빠른 코스, 먼저 도착한 ${winners}명이 당첨됩니다.`));stage.append(this.overlay);
     const side=make('aside','race-sidebar');side.append(make('h3','','LIVE RANKING'));this.rank=make('ol','race-ranking');side.append(this.rank);const miniTitle=make('h3','','COURSE MAP');this.mini=make('canvas','course-minimap');this.mini.width=140;this.mini.height=390;this.mini.setAttribute('aria-label','전체 코스와 공 위치');this.mini.setAttribute('role','img');side.append(miniTitle,this.mini);layout.append(stage,side);root.append(layout);
-    const note=make('p','race-note','범퍼·회전 날개·경사로가 이어지는 종합 코스예요. 중간 대기 없이 먼저 결승선을 통과한 순서로 결정돼요. 멈춘 공에는 작은 바람이 불어요.');root.append(note);
+    const note=make('p','race-note','좁은 병목과 회전 날개, 가속 패드가 빠르게 이어져 마지막 구간까지 순위가 바뀔 수 있어요.');root.append(note);
     this.resize=new ResizeObserver(()=>this.draw());this.resize.observe(stage);this.updateHud();this.draw();
-    if(race.done){this.showFinish();this.camera=race.map.height-850;this.draw();}
+    if(race.done){this.showFinish();this.camera=race.map.height-720;this.draw();}
   }
   start(){if(this.running||this.race.done)return;this.running=true;this.overlay.hidden=true;this.pauseButton.disabled=false;this.stateLabel.textContent='레이스 진행 중';this.last=performance.now();this.frame=requestAnimationFrame(time=>this.tick(time));}
   tick(now){
@@ -58,7 +59,7 @@ export class PinballView {
     ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#060d19';ctx.fillRect(0,0,width,height);
     const scale=width/WIDTH,viewHeight=height/scale;
     const target=this.focus==='leader'?this.standings().find(b=>!b.finished)||this.race.finished[0]:this.race.balls.find(b=>String(b.id)===this.focus);
-    const desired=Math.max(0,Math.min(HEIGHT-viewHeight+70,(target?.y||0)-viewHeight*.38));this.camera+=((this.running&&!this.paused? .13:1)*(desired-this.camera));
+    const desired=Math.max(0,Math.min(HEIGHT-viewHeight+70,(target?.y||0)-viewHeight*.34));this.camera+=((this.running&&!this.paused? .18:1)*(desired-this.camera));
     ctx.save();ctx.scale(scale,scale);ctx.translate(0,-this.camera);drawMap(ctx,this.race.map,this.race.time);
     this.race.balls.forEach(ball=>{if(ball.finished)return;circle(ctx,ball.x,ball.y,RADIUS,COLORS[ball.id%COLORS.length],'#ffffffaa');ctx.font=`600 ${Math.max(17,12/scale)}px sans-serif`;const label=ball.name.length>9?ball.name.slice(0,8)+'…':ball.name;const tw=ctx.measureText(label).width;const tx=Math.max(28,Math.min(WIDTH-tw-28,ball.x-tw/2));ctx.fillStyle='#071120d9';ctx.fillRect(tx-4,ball.y-44,tw+8,25);ctx.fillStyle='#edf7ff';ctx.fillText(label,tx,ball.y-24);});ctx.restore();
     const mini=this.mini.getContext('2d');mini.clearRect(0,0,140,390);mini.fillStyle='#07101f';mini.fillRect(0,0,140,390);mini.save();mini.scale(140/WIDTH,390/(HEIGHT+80));drawMap(mini,this.race.map,this.race.time);this.race.balls.forEach(ball=>circle(mini,ball.x,ball.y,24,COLORS[ball.id%COLORS.length]));mini.strokeStyle='#ffffffa0';mini.lineWidth=8;mini.strokeRect(16,this.camera,WIDTH-32,Math.min(viewHeight,HEIGHT-this.camera));mini.restore();
