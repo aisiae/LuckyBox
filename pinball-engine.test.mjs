@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {MAPS,createRace,stepRace,makeMap,rotorSegment} from './dist/pinball-engine.mjs';
+import {MAPS,RADIUS,createRace,stepRace,makeMap,rotorSegment} from './dist/pinball-engine.mjs';
 test('all three courses finish with unique, chronological results at 2 and 50 players',()=>{
   for(const map of MAPS)for(const size of [2,50])for(const length of ['short','standard','long']){
     const names=Array.from({length:size},(_,i)=>`Player ${i}`),race=createRace(names,map.id,length);
@@ -34,4 +34,10 @@ test('an upward-moving rotor grabs a ball and carries it upward before release',
   const startY=ball.y;let grabbed=false,minY=startY;
   for(let tick=0;tick<180;tick++){stepRace(race);grabbed||=Boolean(ball.grab);minY=Math.min(minY,ball.y);}
   assert.ok(grabbed);assert.ok(minY<startY-60);assert.ok(race.rotorLifts>=1);assert.equal(ball.grab,null);
+});
+test('balls collide elastically instead of passing through each other',()=>{
+  const race=createRace(['Left','Right'],'factory','standard'),[left,right]=race.balls;
+  left.x=350;left.y=70;left.vx=150;left.vy=0;right.x=373;right.y=70;right.vx=-150;right.vy=0;
+  stepRace(race);
+  assert.ok(left.vx<0);assert.ok(right.vx>0);assert.ok(Math.hypot(right.x-left.x,right.y-left.y)>=RADIUS*2-0.01);assert.equal(race.ballCollisions,1);
 });

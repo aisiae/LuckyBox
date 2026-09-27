@@ -92,7 +92,7 @@ export function rotorSegment(rotor,time){
 export function createRace(names,mapId,length='standard'){
   if(names.length<2||names.length>50||new Set(names).size!==names.length)throw new Error('참가자는 서로 다른 2~50명이어야 해요.');
   const order=shuffle(names);
-  return{map:makeMap(mapId,length),time:0,finished:[],leadChanges:0,rotorLifts:0,lastLeader:null,balls:order.map((name,i)=>({name,id:names.indexOf(name),x:75+randomInt(650),y:32-Math.floor(i/12)*28,vx:randomInt(101)-50,vy:20,bestY:-200,stall:0,padCooldown:0,rotorCooldown:0,grab:null,dramaHits:new Set(),finished:false})),done:false};
+  return{map:makeMap(mapId,length),time:0,finished:[],leadChanges:0,rotorLifts:0,ballCollisions:0,lastLeader:null,balls:order.map((name,i)=>({name,id:names.indexOf(name),x:75+randomInt(650),y:32-Math.floor(i/12)*28,vx:randomInt(101)-50,vy:20,bestY:-200,stall:0,hit:0,padCooldown:0,rotorCooldown:0,grab:null,dramaHits:new Set(),finished:false})),done:false};
 }
 
 function collide(ball,x,y,r,vx=0,vy=0,bounce=.66){
@@ -138,6 +138,23 @@ function advanceRotorGrab(ball,time,dt,race){
   return false;
 }
 
+function collideBalls(a,b,race){
+  let dx=b.x-a.x,dy=b.y-a.y,distance=Math.hypot(dx,dy),minimum=RADIUS*2;
+  if(distance>=minimum)return;
+  if(distance<.0001){const angle=((a.id*73+b.id*41)%360)*Math.PI/180;dx=Math.cos(angle);dy=Math.sin(angle);distance=1;}
+  const nx=dx/distance,ny=dy/distance,invA=a.grab?0:1,invB=b.grab?0:1,invSum=invA+invB;
+  if(!invSum)return;
+  const overlap=minimum-distance+.15;
+  a.x-=nx*overlap*invA/invSum;a.y-=ny*overlap*invA/invSum;
+  b.x+=nx*overlap*invB/invSum;b.y+=ny*overlap*invB/invSum;
+  const relative=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
+  if(relative>=0)return;
+  const impulse=-(1+.9)*relative/invSum;
+  a.vx-=impulse*invA*nx;a.vy-=impulse*invA*ny;
+  b.vx+=impulse*invB*nx;b.vy+=impulse*invB*ny;
+  a.hit=.16;b.hit=.16;race.ballCollisions++;
+}
+
 function enterDramaZone(ball,zone,rank,total){
   if(ball.dramaHits.has(zone.id))return;
   ball.dramaHits.add(zone.id);
@@ -160,6 +177,7 @@ export function stepRace(race,dt=1/120){
   const leaderY=leader?.y||0,arrivals=[];
   for(const ball of race.balls){
     if(ball.finished)continue;
+    ball.hit=Math.max(0,ball.hit-dt);
     ball.rotorCooldown=Math.max(0,ball.rotorCooldown-dt);
     if(advanceRotorGrab(ball,race.time,dt,race))continue;
     const oldY=ball.y,rank=ranks.get(ball)||0,gap=Math.max(0,leaderY-ball.y),draft=1+Math.min(.24,gap/1400);
@@ -178,6 +196,13 @@ export function stepRace(race,dt=1/120){
     if(ball.y>ball.bestY+9){ball.bestY=ball.y;ball.stall=0;}else ball.stall+=dt;
     if(ball.stall>1.8){ball.vx+=(randomInt(2)?1:-1)*(95+randomInt(80));ball.vy=92;ball.stall=0;}
     if(ball.y>=race.map.height){ball.finished=true;ball.finishTime=race.time-dt+dt*Math.max(0,Math.min(1,(race.map.height-oldY)/(ball.y-oldY||1)));ball.y=race.map.height;arrivals.push(ball);}
+  }
+  const collisionBalls=race.balls.filter(ball=>!ball.finished);
+  for(let i=0;i<collisionBalls.length-1;i++)for(let j=i+1;j<collisionBalls.length;j++)collideBalls(collisionBalls[i],collisionBalls[j],race);
+  for(const ball of collisionBalls){
+    if(ball.grab)continue;
+    ball.x=Math.max(RADIUS+24,Math.min(WIDTH-RADIUS-24,ball.x));
+    ball.vx=Math.max(-340,Math.min(340,ball.vx));ball.vy=Math.max(-190,Math.min(175*race.map.pace,ball.vy));
   }
   arrivals.sort((a,b)=>a.finishTime-b.finishTime||a.x-b.x);
   race.finished.push(...arrivals);
