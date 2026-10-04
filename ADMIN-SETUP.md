@@ -1,37 +1,37 @@
-# 관리자 통계 설정
+# Firebase 관리자 통계 설정
 
-## 접속
+## 연결 순서
 
-배포 후 `https://lucky-box-sable.vercel.app/admin`으로 직접 접속합니다. 일반 화면에는 관리자 링크를 넣지 않았습니다. 관리자 HTML과 JSON 데이터는 모두 서버의 HTTP Basic 인증을 통과해야 내려옵니다. 주소를 아는 사람도 로그인 없이는 내용을 볼 수 없습니다. 비밀번호는 브라우저 코드에 들어가지 않습니다. 검색 제외는 보조 설정이며 보안은 인증으로 처리합니다.
+1. Firebase Console에서 프로젝트를 선택하고 Firestore의 `(default)` 데이터베이스를 준비합니다.
+2. 프로젝트 설정 → 서비스 계정에서 서버용 비공개 키를 준비합니다. Firestore 읽기·쓰기 IAM 권한이 필요합니다. 키 파일은 GitHub나 대화에 올리지 마세요.
+3. Vercel의 lucky-box → Settings → Environment Variables에서 Production 환경에 등록합니다.
+   - ADMIN_USERNAME: 관리자 아이디. 생략하면 admin.
+   - ADMIN_PASSWORD: 최소 16자의 고유한 긴 비밀번호.
+   - FIREBASE_PROJECT_ID: 서비스 계정 JSON의 project_id.
+   - FIREBASE_CLIENT_EMAIL: JSON의 client_email.
+   - FIREBASE_PRIVATE_KEY: JSON의 private_key. 실제 줄바꿈이나 리터럴 \n 모두 지원합니다.
+4. firestore.rules의 통계 컬렉션 차단 규칙을 Firebase에 적용합니다. 기존 프로젝트라면 다른 서비스 규칙을 덮어쓰지 말고 병합하세요. 전역 허용 규칙과 겹치면 접근이 열릴 수 있습니다. Admin SDK는 서버 IAM 권한으로 접근합니다.
+5. TTL 정책에서 컬렉션 그룹 visitors의 expiresAt 필드를 활성화하세요. 임의 식별 기록은 해당 날짜의 한국 시간 자정에서 2일 뒤 삭제 대상이 되며 실제 삭제는 비동기입니다. TTL이 없으면 기록이 남습니다. 기존 visitors 컬렉션이 있다면 영향 범위를 확인하세요. 일별·누적 집계에는 TTL을 적용하지 않습니다.
+6. 재배포 후 /admin 로그인 → 홈페이지와 게임 방문 → 통계 새로고침으로 확인합니다. Preview에는 운영용 키를 등록하지 않거나 별도 Firebase 프로젝트를 사용하세요.
 
-공용 컴퓨터에서는 사용하지 마세요. Basic 인증은 브라우저가 로그인 정보를 기억할 수 있으므로 이용을 마친 후 해당 시크릿 창을 닫는 방식을 권장합니다. 운영 환경에서는 HTTPS를 사용합니다.
+Upstash는 더 이상 필요하지 않습니다. Firebase 웹용 apiKey만으로는 연결할 수 없습니다. Firebase Authentication 로그인으로 바꾼 것은 아니며 기존 서버 로그인을 유지합니다.
 
-## Vercel 설정
+## 데이터와 관리자 화면
 
-1. Upstash에서 Redis 저장소를 준비하고 REST URL과 쓰기 가능한 REST Token을 확인합니다. 이용 한도와 초과 비용은 계정에서 확인합니다. 기존 저장소를 공유한다면 `lb:` 키가 다른 서비스와 충돌하지 않아야 합니다.
-2. Vercel의 **lucky-box 프로젝트 → Settings → Environment Variables**에서 다음 값을 등록합니다.
-   - `ADMIN_USERNAME`: 관리자 아이디. 생략하면 `admin`.
-   - `ADMIN_PASSWORD`: 비밀번호 관리자로 만든 고유한 긴 비밀번호. 최소 16자. 대화나 공개 저장소에 적지 않습니다.
-   - `UPSTASH_REDIS_REST_URL`: 저장소 REST URL.
-   - `UPSTASH_REDIS_REST_TOKEN`: 저장소 REST Token.
-3. Production 환경에 등록한 뒤 이 수정본을 재배포합니다. Preview에 운영 저장소를 연결하면 미리보기 방문도 합산되므로 별도 저장소를 쓰거나 Preview의 저장소 설정을 비워 둡니다.
-4. `/admin`에서 로그인하고 첫 화면과 게임 화면을 방문한 다음 통계를 새로고침해 집계가 늘어나는지 확인합니다. 시크릿 창에서 비밀번호 없이 관리자 데이터를 볼 수 없는지 확인합니다.
+일별 기록은 luckyboxDaily/YYYY-MM-DD에, 누적 기록은 luckyboxStats/totals에 저장합니다. 당일 중복 확인 기록은 일별 문서의 visitors 하위 컬렉션에 저장합니다. 집계는 트랜잭션으로 함께 반영합니다. 일별·전체 집계는 자동 만료 없이 보관합니다.
 
-설정하지 않으면 방문 집계는 비활성화되고, 관리자 비밀번호가 없거나 짧으면 관리자 화면도 차단됩니다. 비밀번호만 설정하고 저장소를 연결하지 않으면 계산기는 사용할 수 있으며 통계는 미연결 안내로 표시됩니다. 저장소 오류를 방문자 0명으로 표시하지 않습니다. 과거 방문은 복구되지 않습니다.
+일별 방문자는 당일 브라우저 중복을 제외합니다. 누적 visitorDays는 일별 방문자 수의 합계로, 여러 날 방문한 같은 사람도 날짜마다 포함됩니다. 전체 기간의 중복 없는 사람 수는 아닙니다. 같은 페이지를 3초 안에 반복 호출한 조회는 제외합니다. 참가자 이름과 원본 IP를 저장하지 않습니다. 추적 거부 설정을 존중하며 자동 방문을 완벽하게 제외하지는 않습니다.
 
-## 통계 의미
+/admin은 일반 화면에 링크를 두지 않고 서버 HTTP Basic 인증으로 보호합니다. HTTPS에서 사용하고 공용 컴퓨터에서는 시크릿 창을 닫아 로그인 정보를 정리하세요. 비밀번호가 없거나 짧으면 접근이 차단됩니다.
 
-- 한국 시간 자정 기준으로 하루를 구분합니다. 날짜가 바뀌면 임의 식별 쿠키도 바뀝니다.
-- 방문자는 Redis HyperLogLog로 집계한 당일 브라우저 수의 근사치입니다. 실제 사람 수가 아닙니다. 기기 변경, 쿠키 차단 및 자동 방문 등에 영향을 받습니다.
-- 같은 브라우저가 같은 페이지를 3초 안에 반복 호출한 경우 추가 조회를 제외합니다. 브라우저의 Do Not Track / Global Privacy Control 설정도 존중합니다.
-- 일별 조회·방문 집계는 90일 보관합니다. 참가자 이름과 원본 IP는 통계 저장소로 보내지 않습니다.
-- 7일/30일 평균은 집계 시작 다음 날부터 어제까지 완료된 날짜만 포함하며, 방문이 없는 날도 포함합니다. 첫날은 부분 집계일 수 있어 제외합니다.
-- 수익은 직접 입력한 페이지 RPM과 30일 기준 조회 수로 계산한 가정입니다. 실제 AdSense 수익이나 단가를 자동으로 가져오지 않습니다. 환율도 직접 입력한 가정입니다.
+화면은 최근 31일 기록과 누적값을 표시합니다. 오래된 일별 기록도 Firestore에 남습니다. 평균은 시작 다음 날부터 어제까지 완료된 날짜를 대상으로 계산하며 방문이 없는 날도 포함합니다. 광고 수익은 직접 입력한 RPM·환율·운영비에 따른 가정입니다.
 
-방문 집계는 자동 방문을 완전히 차단하는 시스템이 아닙니다. 비정상적인 호출이 발생하면 Vercel 방화벽/요청 제한을 설정하고 사용량을 확인하세요. 실제 광고 도입 시 별도의 광고 정책과 개인정보 안내를 준비합니다.
+설정 전에는 집계가 비활성화됩니다. 저장소 오류는 방문자 0명으로 표시하지 않습니다. 연결 이전 방문은 복원할 수 없습니다. 현재 Upstash 운영 데이터가 없어 데이터 이전은 진행하지 않았습니다.
 
-## 로컬 확인
+## 비용과 로컬 확인
 
-Node.js 24 이상에서 `.env.example`을 참고해 비공개 `.env`를 만든 후 `node --env-file=.env server.mjs`를 실행하고 `http://127.0.0.1:4173/admin`으로 접속합니다. `.env`는 Git에 포함되지 않습니다. 자동 검증은 `npm run check`, `npm test`입니다.
+방문 집계마다 문서 읽기·쓰기가 발생하고 관리자 새로고침마다 날짜별 문서를 읽습니다. Firebase와 Vercel의 사용량을 확인하세요. TTL 삭제의 비용과 이용 조건도 확인하세요. 트래픽이 많아 누적 문서에 경합이 생기면 분산 카운터로 확장할 수 있습니다.
 
-공식 문서: [Vercel 서버 함수](https://vercel.com/docs/functions/runtimes/node-js), [Upstash REST 연결](https://upstash.com/docs/redis/features/restapi).
+npm ci로 설치한 다음 .env.example을 참고해 비공개 .env를 만들고 node --env-file=.env server.mjs를 실행합니다. 테스트용 Firebase 프로젝트를 권장합니다. 자동 검증은 npm run check와 npm test입니다.
+
+공식 문서: [서버 SDK](https://firebase.google.com/docs/admin/setup), [트랜잭션](https://firebase.google.com/docs/firestore/manage-data/transactions), [TTL](https://firebase.google.com/docs/firestore/ttl).

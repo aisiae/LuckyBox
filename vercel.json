@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "buildCommand": "",
-  "installCommand": "",
+  "installCommand": "npm ci",
   "outputDirectory": "dist",
   "rewrites": [{ "source": "/admin", "destination": "/api/admin" }]
 }

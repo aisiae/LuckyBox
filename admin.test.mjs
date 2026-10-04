@@ -7,8 +7,8 @@ import { dayKey, visitor, summary } from './lib/analytics.mjs';
 import { dashboard } from './lib/dashboard.mjs';
 const originalFetch = globalThis.fetch;
 const originalEnv = { ...process.env };
-afterEach(() => { globalThis.fetch = originalFetch; for (const key of ['ADMIN_PASSWORD','ADMIN_USERNAME','UPSTASH_REDIS_REST_URL','UPSTASH_REDIS_REST_TOKEN']) { if (originalEnv[key] === undefined) delete process.env[key]; else process.env[key] = originalEnv[key]; } });
-const configure = () => { process.env.ADMIN_PASSWORD = 'test-only-password-long-enough'; process.env.UPSTASH_REDIS_REST_URL = 'https://example.invalid'; process.env.UPSTASH_REDIS_REST_TOKEN = 'test-token'; };
+afterEach(() => { globalThis.fetch = originalFetch; for (const key of ['ADMIN_PASSWORD','ADMIN_USERNAME','FIREBASE_PROJECT_ID','FIREBASE_CLIENT_EMAIL','FIREBASE_PRIVATE_KEY']) { if (originalEnv[key] === undefined) delete process.env[key]; else process.env[key] = originalEnv[key]; } });
+const configure = () => { process.env.ADMIN_PASSWORD = 'test-only-password-long-enough'; process.env.FIREBASE_PROJECT_ID = 'test-project'; process.env.FIREBASE_CLIENT_EMAIL = 'test@example.invalid'; process.env.FIREBASE_PRIVATE_KEY = 'test-only-invalid-key'; };
 const response = () => ({ statusCode: 200, headers: {}, setHeader(k,v){this.headers[k.toLowerCase()]=v}, end(v=''){this.body=v} });
 test('administrator content is never sent before server authentication', async () => {
  configure(); const res=response(); await admin({ method:'GET', url:'/admin', headers:{} },res);
@@ -18,7 +18,7 @@ test('missing or short password fails closed', async () => {
  process.env.ADMIN_PASSWORD='short'; const res=response();await admin({method:'GET',url:'/admin',headers:{}},res);assert.equal(res.statusCode,503);
 });
 test('authenticated calculator works without a connected database', async () => {
- configure(); delete process.env.UPSTASH_REDIS_REST_TOKEN; const res=response();await admin({method:'GET',url:'/admin',headers:{authorization:'Basic '+Buffer.from('admin:'+process.env.ADMIN_PASSWORD).toString('base64')}},res);
+ configure(); delete process.env.FIREBASE_PRIVATE_KEY; const res=response();await admin({method:'GET',url:'/admin',headers:{authorization:'Basic '+Buffer.from('admin:'+process.env.ADMIN_PASSWORD).toString('base64')}},res);
  assert.equal(res.statusCode,200);assert.ok(res.body.includes('통계 저장소가 연결되지'));assert.ok(res.body.includes('광고 수익 계산'));assert.ok(!res.body.includes(process.env.ADMIN_PASSWORD));
 });
 test('day boundaries follow Korean midnight', () => {
@@ -30,11 +30,9 @@ test('signed visit cookie reuses valid visitor and rejects tampering', () => {
 test('visit rejects cross-origin requests before storage access', async () => {
  configure();globalThis.fetch=()=>{throw Error('Must not access storage')};const res=response();await visit({method:'POST',headers:{host:'lucky.test',origin:'https://other.test'}},res);assert.equal(res.statusCode,403);
 });
-test('valid visit records atomic, expiring counters without names or IPs', async () => {
- configure();let commands;globalThis.fetch=async(url,options)=>{commands=JSON.parse(options.body);return {ok:true,json:async()=>[{result:1}]}};const res=response();await visit({method:'POST',headers:{host:'lucky.test',origin:'https://lucky.test','x-luckybox-page':'home'}},res);assert.equal(res.statusCode,204);assert.equal(commands[0][0],'EVAL');assert.ok(commands[0][1].includes('7776000'));assert.ok(!JSON.stringify(commands).includes('lucky.test'));
-});
+
 test('storage failure stays unavailable rather than becoming fake zero statistics', async () => {
- configure();globalThis.fetch=async()=>({ok:false});await assert.rejects(summary());
+ configure(); await assert.rejects(summary());
 });
 test('calculator computes revenue and break-even in rendered page', () => {
  const nodes=new Map();const node=id=>{if(!nodes.has(id))nodes.set(id,{value:({daily:'100',pages:'2',rpm:'1',fx:'1400',cost:'20'})[id]||'',style:{},textContent:'',checkValidity:()=>true,replaceChildren(){},append(){},addEventListener(){}});return nodes.get(id)};

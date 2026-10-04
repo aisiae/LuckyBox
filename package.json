@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "node server.mjs",
-    "check": "node --check dist/app.js && node --check dist/game.mjs && node --check dist/pinball-engine.mjs && node --check dist/pinball-ui.mjs && node --check dist/roulette-engine.mjs && node --check dist/roulette-ui.mjs && node --check dist/card-engine.mjs && node --check dist/card-ui.mjs && node --check dist/slot-engine.mjs && node --check dist/slot-ui.mjs && node --check server.mjs && node --check api/admin.mjs && node --check api/visit.mjs && node --check lib/analytics.mjs && node --check lib/dashboard.mjs && node --check dist/analytics.js",
-    "test": "node --test ladder-engine.test.mjs pinball-engine.test.mjs roulette-engine.test.mjs card-engine.test.mjs slot-engine.test.mjs admin.test.mjs"
+    "check": "node --check dist/app.js && node --check dist/game.mjs && node --check dist/pinball-engine.mjs && node --check dist/pinball-ui.mjs && node --check dist/roulette-engine.mjs && node --check dist/roulette-ui.mjs && node --check dist/card-engine.mjs && node --check dist/card-ui.mjs && node --check dist/slot-engine.mjs && node --check dist/slot-ui.mjs && node --check server.mjs && node --check api/admin.mjs && node --check api/visit.mjs && node --check lib/analytics.mjs && node --check lib/dashboard.mjs && node --check dist/analytics.js && node --check lib/firebase.mjs",
+    "test": "node --test ladder-engine.test.mjs pinball-engine.test.mjs roulette-engine.test.mjs card-engine.test.mjs slot-engine.test.mjs admin.test.mjs firebase.test.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^14.5.0"
   }
 }

@@ -1,10 +1,5 @@
-import { ready, redis, dayKey, visitor } from '../lib/analytics.mjs';
-
-// The atomic script prevents reload bursts from incrementing the same page repeatedly.
-const script = `if redis.call('SET', KEYS[3], '1', 'EX', 3, 'NX') then
-redis.call('INCR', KEYS[1]); redis.call('PFADD', KEYS[2], ARGV[1]);
-redis.call('EXPIRE', KEYS[1], 7776000); redis.call('EXPIRE', KEYS[2], 7776000);
-redis.call('SET', 'lb:first', ARGV[2], 'NX'); return 1; end; return 0`;
+import { ready, dayKey, visitor } from '../lib/analytics.mjs';
+import { database, recordVisit } from '../lib/firebase.mjs';
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -17,7 +12,7 @@ export default async function handler(req, res) {
     const page = req.headers['x-luckybox-page'];
     if (!['home', 'game'].includes(page)) { res.statusCode = 400; return res.end(); }
     const day = dayKey(), id = visitor(req, res);
-    await redis([['EVAL', script, 3, `lb:pv:${day}`, `lb:uv:${day}`, `lb:cooldown:${day}:${id}:${page}`, id, day]]);
+    await recordVisit(database(), day, id, page);
     res.statusCode = 204; res.end();
   } catch { res.statusCode = 503; res.end(); }
 }
