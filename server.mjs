@@ -12,5 +12,7 @@ for (const file of ['card-engine.mjs','card-ui.mjs','card.css']) assets[`/${file
 for (const file of ['slot-engine.mjs','slot-ui.mjs','slot.css']) assets[`/${file}`]=[file,`${file.endsWith('.css')?'text/css':'text/javascript'}; charset=utf-8`];
 assets['/analytics.js']=['analytics.js','text/javascript; charset=utf-8'];
 assets['/privacy.html']=['privacy.html','text/html; charset=utf-8'];
+assets['/sitemap.xml']=['sitemap.xml','application/xml; charset=utf-8'];
+assets['/robots.txt']=['robots.txt','text/plain; charset=utf-8'];
 const server = http.createServer(async(req,res)=>{const path=new URL(req.url,'http://localhost').pathname;if(path==='/admin'||path==='/api/admin')return admin(req,res);if(path==='/api/visit')return visit(req,res);const asset=assets[path];if(!asset){res.writeHead(404);res.end('Not found');return;}try{const data=await readFile(new URL(`./dist/${asset[0]}`,import.meta.url));res.writeHead(200,{'Content-Type':asset[1],'Cache-Control':'no-store'});res.end(data);}catch{res.writeHead(500);res.end('Could not load file');}});
 server.listen(4173,'127.0.0.1',()=>console.log('LuckyBox preview: http://127.0.0.1:4173'));
