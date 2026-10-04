@@ -1,5 +1,7 @@
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
+import admin from './api/admin.mjs';
+import visit from './api/visit.mjs';
 const assets = { '/':['index.html','text/html; charset=utf-8'], '/index.html':['index.html','text/html; charset=utf-8'], '/styles.css':['styles.css','text/css; charset=utf-8'], '/groups.css':['groups.css','text/css; charset=utf-8'], '/theme.css':['theme.css','text/css; charset=utf-8'], '/app.js':['app.js','text/javascript; charset=utf-8'] };
 for (const [file, type] of [['game.html','text/html'],['game.css','text/css'],['ladder-custom.css','text/css'],['game.mjs','text/javascript'],['ladder-engine.mjs','text/javascript']]) assets[`/${file}`] = [file, `${type}; charset=utf-8`];
 assets['/game-groups.css']=['game-groups.css','text/css; charset=utf-8'];
@@ -8,5 +10,7 @@ for (const file of ['pinball-engine.mjs','pinball-ui.mjs','pinball.css','pinball
 for (const file of ['roulette-engine.mjs','roulette-ui.mjs','roulette.css']) assets[`/${file}`]=[file,`${file.endsWith('.css')?'text/css':'text/javascript'}; charset=utf-8`];
 for (const file of ['card-engine.mjs','card-ui.mjs','card.css']) assets[`/${file}`]=[file,`${file.endsWith('.css')?'text/css':'text/javascript'}; charset=utf-8`];
 for (const file of ['slot-engine.mjs','slot-ui.mjs','slot.css']) assets[`/${file}`]=[file,`${file.endsWith('.css')?'text/css':'text/javascript'}; charset=utf-8`];
-const server = http.createServer(async(req,res)=>{const path=new URL(req.url,'http://localhost').pathname;const asset=assets[path];if(!asset){res.writeHead(404);res.end('Not found');return;}try{const data=await readFile(new URL(`./dist/${asset[0]}`,import.meta.url));res.writeHead(200,{'Content-Type':asset[1],'Cache-Control':'no-store'});res.end(data);}catch{res.writeHead(500);res.end('Could not load file');}});
+assets['/analytics.js']=['analytics.js','text/javascript; charset=utf-8'];
+assets['/privacy.html']=['privacy.html','text/html; charset=utf-8'];
+const server = http.createServer(async(req,res)=>{const path=new URL(req.url,'http://localhost').pathname;if(path==='/admin'||path==='/api/admin')return admin(req,res);if(path==='/api/visit')return visit(req,res);const asset=assets[path];if(!asset){res.writeHead(404);res.end('Not found');return;}try{const data=await readFile(new URL(`./dist/${asset[0]}`,import.meta.url));res.writeHead(200,{'Content-Type':asset[1],'Cache-Control':'no-store'});res.end(data);}catch{res.writeHead(500);res.end('Could not load file');}});
 server.listen(4173,'127.0.0.1',()=>console.log('LuckyBox preview: http://127.0.0.1:4173'));
