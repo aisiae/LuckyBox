@@ -2,4 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://lucky-box-sable.vercel.app/</loc></url>
   <url><loc>https://lucky-box-sable.vercel.app/privacy.html</loc></url>
+  <url><loc>https://lucky-box-sable.vercel.app/ladder</loc></url>
+  <url><loc>https://lucky-box-sable.vercel.app/roulette</loc></url>
+  <url><loc>https://lucky-box-sable.vercel.app/random-groups</loc></url>
 </urlset>

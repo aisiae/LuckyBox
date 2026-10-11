@@ -2,7 +2,8 @@ const $ = (selector) => document.querySelector(selector);
 const STORAGE_KEY = 'luckybox.participants.v1';
 const GROUP_KEY = 'luckybox.groups.v1';
 let groups = [], activeGroupId = '';
-let selected = 'ladder';
+const requestedGame = new URLSearchParams(location.search).get('game');
+let selected = ['ladder','roulette','pinball','cards','slots'].includes(requestedGame) ? requestedGame : 'ladder';
 let toastTimer;
 const svg = (content) => `<svg viewBox="0 0 140 86" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${content}</svg>`;
 const games = [

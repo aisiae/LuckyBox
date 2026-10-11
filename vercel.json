@@ -4,5 +4,39 @@
   "buildCommand": "",
   "installCommand": "npm ci",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/admin", "destination": "/api/admin" }]
+  "rewrites": [
+    {
+      "source": "/admin",
+      "destination": "/api/admin"
+    },
+    {
+      "source": "/ladder",
+      "destination": "/ladder.html"
+    },
+    {
+      "source": "/roulette",
+      "destination": "/roulette.html"
+    },
+    {
+      "source": "/random-groups",
+      "destination": "/random-groups.html"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/ladder.html",
+      "destination": "/ladder",
+      "permanent": true
+    },
+    {
+      "source": "/roulette.html",
+      "destination": "/roulette",
+      "permanent": true
+    },
+    {
+      "source": "/random-groups.html",
+      "destination": "/random-groups",
+      "permanent": true
+    }
+  ]
 }
