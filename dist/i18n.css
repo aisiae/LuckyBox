@@ -1,0 +1,11 @@
+.language-picker{display:inline-flex;align-items:center;gap:8px;flex-shrink:0;font-size:12px;color:var(--muted,#a1a7b9);margin-left:auto}
+.language-picker select{font:inherit;max-width:145px;min-height:40px;border:1px solid var(--line,#334155);border-radius:10px;padding:7px 28px 7px 10px;background:#172235;color:#edf4ff;cursor:pointer}
+.language-picker select:focus-visible{outline:3px solid #70d7ff;outline-offset:3px}
+.language-picker-standalone{display:flex;justify-content:flex-end;position:relative;margin:0 0 24px;order:-1}
+.header .back-link{margin-left:auto}.header:has(.back-link) .language-picker{margin-left:0}
+html:not([lang="ko"]) h1,html:not([lang="ko"]) h2,html:not([lang="ko"]) h3{letter-spacing:normal}
+html:not([lang="ko"]) .panel-heading,html:not([lang="ko"]) .list-toolbar,html:not([lang="ko"]) .group-name-row{flex-wrap:wrap;gap:8px}
+html:not([lang="ko"]) .game-card,html:not([lang="ko"]) .primary-button,html:not([lang="ko"]) .secondary-button{overflow-wrap:anywhere}
+html:not([lang="ko"]) .selection-copy{min-width:0}.selection .primary-button{white-space:normal}
+@media(max-width:720px){.header{gap:10px}.header .language-picker{margin-left:auto}.language-picker>span{display:none}.language-picker select{max-width:110px;padding-right:18px}.header:has(.back-link){height:auto;min-height:70px;flex-wrap:wrap;padding-top:12px;padding-bottom:12px}.header:has(.back-link) .back-link{font-size:12px}.help-button{margin-left:0}.header .brand{flex-shrink:0}.panel-heading h2{font-size:18px}}
+@media(max-width:400px){.header .brand{font-size:18px;gap:7px}.header .brand-icon{width:30px;height:34px;font-size:23px}.header .brand .beta{display:none}.header .help-button{margin-left:0;width:28px;flex-shrink:0}.header .language-picker select{width:88px;padding:7px 6px}.header{padding-left:16px;padding-right:16px}}

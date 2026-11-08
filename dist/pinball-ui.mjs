@@ -1,3 +1,4 @@
+import { t } from './i18n.mjs';
 import { MAPS, WIDTH, RADIUS, makeMap, rotorSegment, stepRace } from './pinball-engine.mjs';
 const COLORS=['#37dbed','#bf9bff','#ff86b5','#70e3a7','#ffc56b','#8babff','#ff9973','#edb5ff'];
 const make=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
@@ -19,41 +20,41 @@ function drawMap(ctx,map,time){
 }
 export function mapPicker(container){
   let selected='garden';const root=make('div','map-options');
-  MAPS.forEach((map,index)=>{const button=make('button','map-option');button.type='button';button.setAttribute('aria-pressed',String(index===0));button.setAttribute('aria-label',`${map.name} 선택`);const canvas=make('canvas');canvas.width=400;canvas.height=160;canvas.setAttribute('aria-hidden','true');const ctx=canvas.getContext('2d');ctx.fillStyle='#080f1f';ctx.fillRect(0,0,400,160);ctx.save();ctx.scale(.5,.5);ctx.translate(0,-80);const preview=makeMap(map.id);drawMap(ctx,preview,1,75);ctx.restore();button.append(canvas,make('span','map-tag',map.tag),make('strong','',map.name),make('span','map-description',map.description));button.onclick=()=>{selected=map.id;root.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));};root.append(button);});
+  MAPS.forEach((map,index)=>{const button=make('button','map-option');button.type='button';button.setAttribute('aria-pressed',String(index===0));button.setAttribute('aria-label',t`${t(map.name)} 선택`);const canvas=make('canvas');canvas.width=400;canvas.height=160;canvas.setAttribute('aria-hidden','true');const ctx=canvas.getContext('2d');ctx.fillStyle='#080f1f';ctx.fillRect(0,0,400,160);ctx.save();ctx.scale(.5,.5);ctx.translate(0,-80);const preview=makeMap(map.id);drawMap(ctx,preview,1,75);ctx.restore();button.append(canvas,make('span','map-tag',map.tag),make('strong','',t(map.name)),make('span','map-description',t(map.description)));button.onclick=()=>{selected=map.id;root.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));};root.append(button);});
   container.append(root);return()=>selected;
 }
 export class PinballView {
   constructor(root,race,winners,onFinish){
     this.root=root;this.race=race;this.winners=winners;this.onFinish=onFinish;this.camera=0;this.speed=1;this.paused=false;this.running=false;this.focus='leader';this.frame=0;this.accumulator=0;this.last=0;this.lastHud=-1;this.destroyed=false;this.previousRanks=new Map();
     root.replaceChildren();const toolbar=make('div','race-toolbar');
-    this.timeLabel=make('span','race-clock','00:00');this.stateLabel=make('span','race-state',race.done?'레이스 완료':'출발 대기');
-    this.pauseButton=make('button','secondary-button','일시정지');this.pauseButton.disabled=true;this.pauseButton.onclick=()=>{this.paused=!this.paused;this.pauseButton.textContent=this.paused?'계속하기':'일시정지';this.stateLabel.textContent=this.paused?'일시정지':'레이스 진행 중';};
-    const speedLabel=make('label','','속도 '),speed=make('select');speed.setAttribute('aria-label','재생 속도');[1,2,4].forEach(value=>{const option=make('option','',`${value}×`);option.value=value;speed.append(option);});speed.onchange=()=>this.speed=Number(speed.value);speedLabel.append(speed);
-    const focusLabel=make('label','','카메라 '),focus=make('select');focus.setAttribute('aria-label','카메라 추적');const lead=make('option','','선두 따라가기');lead.value='leader';focus.append(lead);race.balls.forEach(ball=>{const option=make('option','',ball.name);option.value=ball.id;focus.append(option);});focus.onchange=()=>{this.focus=focus.value;this.draw();};focusLabel.append(focus);
+    this.timeLabel=make('span','race-clock','00:00');this.stateLabel=make('span','race-state',race.done?t('레이스 완료'):t('출발 대기'));
+    this.pauseButton=make('button','secondary-button',t('일시정지'));this.pauseButton.disabled=true;this.pauseButton.onclick=()=>{this.paused=!this.paused;this.pauseButton.textContent=this.paused?t('계속하기'):t('일시정지');this.stateLabel.textContent=this.paused?t('일시정지'):t('레이스 진행 중');};
+    const speedLabel=make('label','',t('속도 ')),speed=make('select');speed.setAttribute('aria-label',t('재생 속도'));[1,2,4].forEach(value=>{const option=make('option','',`${value}×`);option.value=value;speed.append(option);});speed.onchange=()=>this.speed=Number(speed.value);speedLabel.append(speed);
+    const focusLabel=make('label','',t('카메라 ')),focus=make('select');focus.setAttribute('aria-label',t('카메라 추적'));const lead=make('option','',t('선두 따라가기'));lead.value='leader';focus.append(lead);race.balls.forEach(ball=>{const option=make('option','',ball.name);option.value=ball.id;focus.append(option);});focus.onchange=()=>{this.focus=focus.value;this.draw();};focusLabel.append(focus);
     toolbar.append(this.timeLabel,this.stateLabel,this.pauseButton,speedLabel,focusLabel);root.append(toolbar);
-    const layout=make('div','race-layout'),stage=make('div','race-stage');this.canvas=make('canvas');this.canvas.setAttribute('role','img');this.canvas.setAttribute('aria-label','핀볼 레이스. 공을 따라 화면이 내려갑니다. 순위는 옆의 실시간 순위 목록에서도 확인할 수 있습니다.');stage.append(this.canvas);
-    this.overlay=make('div','race-overlay');this.overlay.append(make('strong','','READY?'),make('span','',`약 1분 동안 선두가 계속 바뀝니다. 먼저 도착한 ${winners}명이 당첨됩니다.`));stage.append(this.overlay);
-    const side=make('aside','race-sidebar');side.append(make('h3','','LIVE RANKING'));this.rank=make('ol','race-ranking');side.append(this.rank);const miniTitle=make('h3','','COURSE MAP');this.mini=make('canvas','course-minimap');this.mini.width=140;this.mini.height=390;this.mini.setAttribute('aria-label','전체 코스와 공 위치');this.mini.setAttribute('role','img');side.append(miniTitle,this.mini);layout.append(stage,side);root.append(layout);
-    const note=make('p','race-note','공끼리 부딪히면 서로 튕겨나가고, 회전 막대는 공을 붙잡아 위로 끌어 올리기도 해요. 결승 직전까지 순위가 바뀝니다.');root.append(note);
+    const layout=make('div','race-layout'),stage=make('div','race-stage');this.canvas=make('canvas');this.canvas.setAttribute('role','img');this.canvas.setAttribute('aria-label',t('핀볼 레이스. 공을 따라 화면이 내려갑니다. 순위는 옆의 실시간 순위 목록에서도 확인할 수 있습니다.'));stage.append(this.canvas);
+    this.overlay=make('div','race-overlay');this.overlay.append(make('strong','','READY?'),make('span','',t`약 1분 동안 선두가 계속 바뀝니다. 먼저 도착한 ${winners}명이 당첨됩니다.`));stage.append(this.overlay);
+    const side=make('aside','race-sidebar');side.append(make('h3','','LIVE RANKING'));this.rank=make('ol','race-ranking');side.append(this.rank);const miniTitle=make('h3','','COURSE MAP');this.mini=make('canvas','course-minimap');this.mini.width=140;this.mini.height=390;this.mini.setAttribute('aria-label',t('전체 코스와 공 위치'));this.mini.setAttribute('role','img');side.append(miniTitle,this.mini);layout.append(stage,side);root.append(layout);
+    const note=make('p','race-note',t('공끼리 부딪히면 서로 튕겨나가고, 회전 막대는 공을 붙잡아 위로 끌어 올리기도 해요. 결승 직전까지 순위가 바뀝니다.'));root.append(note);
     this.resize=new ResizeObserver(()=>this.draw());this.resize.observe(stage);this.updateHud();this.draw();
     if(race.done){this.showFinish();this.camera=race.map.height-720;this.draw();}
   }
-  start(){if(this.running||this.race.done)return;this.running=true;this.overlay.hidden=true;this.pauseButton.disabled=false;this.stateLabel.textContent='레이스 진행 중';this.last=performance.now();this.frame=requestAnimationFrame(time=>this.tick(time));}
+  start(){if(this.running||this.race.done)return;this.running=true;this.overlay.hidden=true;this.pauseButton.disabled=false;this.stateLabel.textContent=t('레이스 진행 중');this.last=performance.now();this.frame=requestAnimationFrame(time=>this.tick(time));}
   tick(now){
     if(this.destroyed)return;
     const elapsed=Math.min(.12,Math.max(0,(now-this.last)/1000));this.last=now;
     if(!this.paused&&!document.hidden){this.accumulator+=elapsed*this.speed;while(this.accumulator>=1/120&&!this.race.done){stepRace(this.race);this.accumulator-=1/120;}this.draw();if(this.race.time-this.lastHud>.15){this.updateHud();this.lastHud=this.race.time;}}
-    if(this.race.done){this.running=false;this.pauseButton.disabled=true;this.stateLabel.textContent='모두 도착했어요';this.updateHud();this.draw();this.showFinish();this.onFinish(this.race);return;}
+    if(this.race.done){this.running=false;this.pauseButton.disabled=true;this.stateLabel.textContent=t('모두 도착했어요');this.updateHud();this.draw();this.showFinish();this.onFinish(this.race);return;}
     this.frame=requestAnimationFrame(time=>this.tick(time));
   }
   standings(){return[...this.race.finished,...this.race.balls.filter(b=>!b.finished).sort((a,b)=>b.y-a.y)];}
-  showFinish(){this.overlay.hidden=false;this.overlay.replaceChildren(make('strong','','FINISH!'),make('span','finish-winners',this.race.finished.slice(0,this.winners).map(b=>b.name).join(', ')),make('span','','당첨을 축하해요!'));}
+  showFinish(){this.overlay.hidden=false;this.overlay.replaceChildren(make('strong','','FINISH!'),make('span','finish-winners',this.race.finished.slice(0,this.winners).map(b=>b.name).join(', ')),make('span','',t('당첨을 축하해요!')));}
   updateHud(){
     const time=Math.floor(this.race.time);this.timeLabel.textContent=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(time%60).padStart(2,'0')}`;
     const standings=this.standings(),leader=standings.find(ball=>!ball.finished)||standings[0];
-    if(this.running&&!this.paused&&leader)this.stateLabel.textContent=`${leader.name} 선두 · ${this.race.leadChanges}번 선두 교체`;
-    this.rank.replaceChildren();standings.forEach((ball,i)=>{const previous=this.previousRanks.get(ball.id),moved=previous===undefined?'':previous>i?'▲':previous<i?'▼':'';const row=make('li',`${ball.finished&&i<this.winners?'rank-winner ':''}${moved==='▲'?'rank-up':moved==='▼'?'rank-down':''}`.trim());const dot=make('span','ball-dot');dot.style.background=COLORS[ball.id%COLORS.length];const status=ball.finished?(i<this.winners?'★':'도착'):moved||'—';row.append(make('span','rank-number',String(i+1)),dot,make('span','rank-name',ball.name),make('span','rank-status',status));this.rank.append(row);this.previousRanks.set(ball.id,i);});
-    this.canvas.setAttribute('aria-label',`핀볼 레이스 ${time}초 경과, ${this.race.finished.length}/${this.race.balls.length}명 도착. 실시간 순위 목록에서 이름을 확인하세요.`);
+    if(this.running&&!this.paused&&leader)this.stateLabel.textContent=t`${leader.name} 선두 · ${this.race.leadChanges}번 선두 교체`;
+    this.rank.replaceChildren();standings.forEach((ball,i)=>{const previous=this.previousRanks.get(ball.id),moved=previous===undefined?'':previous>i?'▲':previous<i?'▼':'';const row=make('li',`${ball.finished&&i<this.winners?'rank-winner ':''}${moved==='▲'?'rank-up':moved==='▼'?'rank-down':''}`.trim());const dot=make('span','ball-dot');dot.style.background=COLORS[ball.id%COLORS.length];const status=ball.finished?(i<this.winners?'★':t('도착')):moved||'—';row.append(make('span','rank-number',String(i+1)),dot,make('span','rank-name',ball.name),make('span','rank-status',status));this.rank.append(row);this.previousRanks.set(ball.id,i);});
+    this.canvas.setAttribute('aria-label',t`핀볼 레이스 ${time}초 경과, ${this.race.finished.length}/${this.race.balls.length}명 도착. 실시간 순위 목록에서 이름을 확인하세요.`);
   }
   draw(){
     if(this.destroyed)return;const HEIGHT=this.race.map.height,rect=this.canvas.parentElement.getBoundingClientRect();if(!rect.width)return;

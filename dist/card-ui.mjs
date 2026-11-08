@@ -1,3 +1,4 @@
+import { t } from './i18n.mjs';
 import { revealCard } from './card-engine.mjs';
 
 const make = (tag, className, text) => {
@@ -22,7 +23,7 @@ export class CardView {
       const button = make('button', `flip-card${card.revealed ? ' is-revealed' : ''}`);
       button.type = 'button';
       button.disabled = card.revealed;
-      button.setAttribute('aria-label', card.revealed ? `${card.name}, ${card.winner ? '당첨' : '꽝'}` : `${card.name} 카드 뒤집기`);
+      button.setAttribute('aria-label', card.revealed ? `${card.name}, ${card.winner ? t('당첨') : t('꽝')}` : t`${card.name} 카드 뒤집기`);
       button.setAttribute('aria-pressed', String(card.revealed));
       const inner = make('span', 'flip-card-inner');
       const back = make('span', 'flip-card-face flip-card-back');
@@ -30,12 +31,12 @@ export class CardView {
       back.append(make('span', 'card-mark', '✦'), make('strong', '', card.name), make('small', '', 'TAP TO REVEAL'));
       const front = make('span', `flip-card-face flip-card-front ${card.winner ? 'winner' : 'blank'}`);
       front.setAttribute('aria-hidden', 'true');
-      front.append(make('span', 'card-result-icon', card.winner ? '★' : '◇'), make('strong', '', card.winner ? '당첨' : '꽝'), make('small', '', card.name));
+      front.append(make('span', 'card-result-icon', card.winner ? '★' : '◇'), make('strong', '', card.winner ? t('당첨') : t('꽝')), make('small', '', card.name));
       inner.append(back, front);button.append(inner);
       button.onclick = () => {
         const revealed = revealCard(this.state, card.id);
         button.classList.add('is-revealed');button.disabled = true;button.setAttribute('aria-pressed', 'true');
-        button.setAttribute('aria-label', `${revealed.name}, ${revealed.winner ? '당첨' : '꽝'}`);
+        button.setAttribute('aria-label', `${revealed.name}, ${revealed.winner ? t('당첨') : t('꽝')}`);
         this.onReveal(this.state, revealed);
       };
       grid.append(button);

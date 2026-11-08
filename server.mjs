@@ -16,6 +16,10 @@ assets['/sitemap.xml']=['sitemap.xml','application/xml; charset=utf-8'];
 assets['/robots.txt']=['robots.txt','text/plain; charset=utf-8'];
 for (const slug of ['ladder','roulette','random-groups']) { assets['/'+slug]=[slug+'.html','text/html; charset=utf-8']; assets['/'+slug+'.html']=assets['/'+slug]; }
 assets['/seo.css']=['seo.css','text/css; charset=utf-8'];
+assets['/ads.css']=['ads.css','text/css; charset=utf-8'];
+assets['/ads.js']=['ads.js','text/javascript; charset=utf-8'];
 assets['/random-groups.js']=['random-groups.js','text/javascript; charset=utf-8'];
+for (const file of ['i18n.mjs','i18n-core.mjs','i18n.css','locales/ko.mjs','locales/en.mjs','locales/ja.mjs']) assets['/'+file]=[file,`${file.endsWith('.css')?'text/css':'text/javascript'}; charset=utf-8`];
 const server = http.createServer(async(req,res)=>{const path=new URL(req.url,'http://localhost').pathname;if(path==='/admin'||path==='/api/admin')return admin(req,res);if(path==='/api/visit')return visit(req,res);const asset=assets[path];if(!asset){res.writeHead(404);res.end('Not found');return;}try{const data=await readFile(new URL(`./dist/${asset[0]}`,import.meta.url));res.writeHead(200,{'Content-Type':asset[1],'Cache-Control':'no-store'});res.end(data);}catch{res.writeHead(500);res.end('Could not load file');}});
-server.listen(4173,'127.0.0.1',()=>console.log('LuckyBox preview: http://127.0.0.1:4173'));
+const port=Number(process.env.PORT||4173);
+server.listen(port,'127.0.0.1',()=>console.log(`LuckyBox preview: http://127.0.0.1:${port}`));

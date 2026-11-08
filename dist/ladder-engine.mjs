@@ -20,7 +20,7 @@ export function splitGroups(names, count, random = false) {
   (random ? shuffle(names) : names).forEach((name, i) => groups[i % count].push(name));
   return groups;
 }
-function createWithOutputs(names, outputs) {
+function createWithOutputs(names, outputs, { losingOutcome = '꽝' } = {}) {
   const rows = Array.from({ length: 22 }, () => {
     const bridges = [];
     for (let i = 0; i < names.length - 1; i++) {
@@ -38,7 +38,7 @@ function createWithOutputs(names, outputs) {
       points.push([lane, row + 1]);
     });
     points.push([lane, rows.length + 1]);
-    return { name, start, end: lane, result: outputs[lane], winner: outputs[lane] === true || (typeof outputs[lane] === 'string' && outputs[lane] !== '꽝'), points };
+    return { name, start, end: lane, result: outputs[lane], winner: outputs[lane] === true || (typeof outputs[lane] === 'string' && outputs[lane] !== '꽝' && outputs[lane] !== losingOutcome), points };
   });
   return { names: [...names], rows, outputs, paths };
 }
@@ -46,7 +46,7 @@ export function createLadder(names, winnerCount) {
   if (names.length < 2 || !Number.isInteger(winnerCount) || winnerCount < 1 || winnerCount >= names.length) throw new Error('당첨 인원은 참가자 수보다 적어야 해요.');
   return createWithOutputs(names, shuffle(names.map((_, i) => i < winnerCount)));
 }
-export function createResultLadder(names, results) {
+export function createResultLadder(names, results, options) {
   if (names.length < 2 || results.length !== names.length || results.some(result => typeof result !== 'string' || !result.trim() || result.trim().length > 30)) throw new Error('참가자 수만큼 1~30자의 결과를 입력해주세요.');
-  return createWithOutputs(names, shuffle(results.map(result => result.trim())));
+  return createWithOutputs(names, shuffle(results.map(result => result.trim())), options);
 }
